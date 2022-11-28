@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		2.1
+// @version		2.9
 // @description	Conveniently link to Rockstars SocialClub list and highlight know good/bad SCs.
 // @author		Myself5
 // @match		https://gta5grand.com/admin_*/account/search
@@ -34,6 +34,10 @@ const _playerSearchCount = "#result_count";
 const _playerSearchHeader = "#result-players-list div:nth-child(2) table tr th:nth-child(6)";
 const _playerSearchTable = "#result-players-list div:nth-child(2) table tr td:nth-child(6)";
 const playerSearchSelectors = { count : _playerSearchCount, header : _playerSearchHeader, table : _playerSearchTable};
+
+var colorMatch = { id : 'colorMatch', value : GM_getValue("colorMatch_value", "true") === "true"};
+var showSCID = { id : 'showSCID', value : GM_getValue("showSCID_value", "true") === "true"};
+var showAllSCID = { id : 'showAllSCID', value : GM_getValue("showAllSCID_value", "false") === "true"};
 
 function waitForInit(pathSelectors) {
 	var checkExist = setInterval(function() {
@@ -148,9 +152,27 @@ function getSBValue() {
 	return val;
 }
 
+function updateSCCheckboxState(cb, value) {
+	var res = value ? "true" : "false";
+	cb.value = value;
+	GM_setValue(cb.id + "_value", res);
+	waitForRSPlayerCards();
+}
+
 function initRSPage() {
 	var txt = document.createElement("h4");
-	txt.innerHTML = "Social Club Legit? <button type='button' id='sc_legit'>Yes</button> <button type='button' id='sc_notlegit'>No</button> <button type='button' id='sc_clear'>Clear</button>";
+	txt.innerHTML = "\
+	Social Club Legit? \
+	<button type='button' id='sc_legit'>Yes</button> \
+	<button type='button' id='sc_notlegit'>No</button> \
+	<button type='button' id='sc_clear'>Clear</button><br>\
+	<input type='checkbox' id=" + colorMatch.id + "> \
+	<label for=" + colorMatch.id + "> Color Name Match</label> \
+	<input type='checkbox' id=" + showSCID.id + "> \
+	<label for=" + showSCID.id + "> Show Match SCID</label> \
+	<input type='checkbox' id=" + showAllSCID.id + "> \
+	<label for=" + showAllSCID.id + "> Show SCID for All Accounts</label> \
+	";
 	var searchfilter = document.getElementsByClassName('Search__filter__2wpcM')[0];
 
 	if (searchfilter != null) {
@@ -160,6 +182,14 @@ function initRSPage() {
 	var sc_legitbutton = document.getElementById('sc_legit');
 	var sc_unlegitbutton = document.getElementById('sc_notlegit');
 	var sc_clearbutton = document.getElementById('sc_clear');
+	var sc_colorMatches = document.getElementById(colorMatch.id);
+	var sc_showSCID = document.getElementById(showSCID.id);
+	var sc_showAllSCID = document.getElementById(showAllSCID.id);
+
+
+	sc_colorMatches.checked = colorMatch.value;
+	sc_showSCID.checked = showSCID.value;
+	sc_showAllSCID.checked = showAllSCID.value;
 
 	(function () {
 		if (sc_legitbutton != null) {
@@ -170,6 +200,15 @@ function initRSPage() {
 		}
 		if (sc_clearbutton != null) {
 			sc_clearbutton.addEventListener("click", function(){ClearSCResult(getSBValue());}, false);
+		}
+		if (sc_colorMatches != null) {
+			sc_colorMatches.addEventListener("click", function(){updateSCCheckboxState(colorMatch, sc_colorMatches.checked);}, false);
+		}
+		if (sc_showSCID != null) {
+			sc_showSCID.addEventListener("click", function(){updateSCCheckboxState(showSCID, sc_showSCID.checked);}, false);
+		}
+		if (sc_showAllSCID != null) {
+			sc_showAllSCID.addEventListener("click", function(){updateSCCheckboxState(showAllSCID, sc_showAllSCID.checked);}, false);
 		}
 	}());
 }
@@ -192,11 +231,12 @@ function waitForRSPlayerCards() {
 		var newCount = playerCards.length;
 		if (playerCards != null && playerCardsSize != newCount) {
 			playerCardsSize = newCount;
-			getRSPlayerRIDs(playerCards);
+			processRSPlayerCards(playerCards);
 			clearInterval(checkExist);
 		}
-    }, 1000); // check every 1000ms
+    }, 500); // check every 1000ms
 
+	// Observer to update Playercards on new search input. For the lack of a better check, observe the URL.
 	var oldPath = location.pathname;
 	var checkUpdated = setInterval(function() {
 		if (oldPath !== location.pathname) {
@@ -204,42 +244,57 @@ function waitForRSPlayerCards() {
 			waitForRSPlayerCards();
 			clearInterval(checkUpdated);
 		}
-    }, 1000); // check every 1000ms
+    }, 500); // check every 1000ms
 }
 
-function getRSPlayerRIDs(playerCards) {
-
+function processRSPlayerCards(playerCards) {
 	for (var i=0; i < playerCards.length; i++) {
+		
 		var outerdiv = document.createElement('div');
 		outerdiv.className = 'UI__PlayerCard__service';
-		var outerspan = document.createElement('span');
-		outerspan.className = 'markedText';
-		var mark = document.createElement('mark');
-		mark.className = 'UI__MarkText__mark';
+		var textspan = document.createElement('span');
+		textspan.className = 'markedText';
 
-		outerspan.appendChild(mark);
-		outerdiv.appendChild(outerspan);
+
 
 		if (playerCards[i].getElementsByClassName('UI__PlayerCard__username') != null) {
 			var uNameCard = playerCards[i].getElementsByClassName('UI__PlayerCard__username')[0];
 			uNameCard.after(outerdiv);
 			var username = uNameCard.textContent;
-			mark.id = "rid_mark_" + username;
+			textspan.id = "rid_" + username;
 
-			$.ajax({
-				method: 'GET',
-				url: 'https://scapi.rockstargames.com/profile/getprofile?nickname=' + username + '&maxFriends=3',
-				beforeSend: function(request) {
-					request.setRequestHeader('Authorization', 'Bearer ' + getCookie('BearerToken'));
-					request.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+			var playercardTextField = document.getElementById(textspan.id);
+			if (playercardTextField == null) {
+				outerdiv.appendChild(textspan);
+				playercardTextField = textspan;
+			}
+
+			if (getSBValue() === username) {
+				var uNameCardText = uNameCard.getElementsByClassName('UI__MarkText__mark');
+				var colorstyle =  colorMatch.value ? "color:green" : "";
+				if (uNameCardText != null) {
+					uNameCardText[0].style = colorstyle;
 				}
-			})
-			.done(function(data) {
-				var scid = data.accounts[0].rockstarAccount.rockstarId;
-				var uname = data.accounts[0].rockstarAccount.name;
-				document.getElementById("rid_mark_" + uname).innerHTML = "RID: " + scid;
+				playercardTextField.style = colorstyle;
+			}
 
-			});
+			if (showSCID.value && (getSBValue() === username || showAllSCID.value)) {
+				$.ajax({
+					method: 'GET',
+					url: 'https://scapi.rockstargames.com/profile/getprofile?nickname=' + username + '&maxFriends=3',
+					beforeSend: function(request) {
+						request.setRequestHeader('Authorization', 'Bearer ' + getCookie('BearerToken'));
+						request.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+					}
+				})
+				.done(function(data) {
+					var scid = data.accounts[0].rockstarAccount.rockstarId;
+					var uname = data.accounts[0].rockstarAccount.name;
+					document.getElementById("rid_" + uname).innerHTML = "RID: " + scid;
+				});
+			} else {
+				playercardTextField.remove();
+			}
 		}
 	}
 }
