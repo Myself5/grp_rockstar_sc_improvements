@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP ACP Social Club improvements
 // @namespace	https://myself5.de
-// @version		1.0.1
+// @version		1.0.2
 // @description	Conveniently link to Rockstars SocialClub list and highlight know good/bad SCs.
 // @author		Myself5
 // @match		https://gta5grand.com/admin_*/account/search
@@ -94,7 +94,7 @@ function redrawSCButtons(sc_fields, sc_names) {
 					}
 				}());
 			} else {
-				sc_fields[i].setHTML("<td><a style='color: " + fontcolor + ";' href='" + baseURL + sc_names[i] + "'>" + sc_names[i] + "</a></td>");
+				sc_fields[i].setHTML("<td><a style='color: " + fontcolor + ";' href='" + baseURL + sc_names[i] + "' target='_blank'>" + sc_names[i] + "</a></td>");
 			}
 		}
 	}
