@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name		GrandRP ACP Social Club improvements
+// @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		2.0
+// @version		2.1
 // @description	Conveniently link to Rockstars SocialClub list and highlight know good/bad SCs.
 // @author		Myself5
 // @match		https://gta5grand.com/admin_*/account/search
@@ -10,6 +10,7 @@
 // @grant		GM_getValue
 // @grant		GM_setValue
 // @grant		GM_deleteValue
+// @require      https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.1/jquery.min.js
 // ==/UserScript==
 
 // Config
@@ -147,7 +148,7 @@ function getSBValue() {
 	return val;
 }
 
-function initRSButtons() {
+function initRSPage() {
 	var txt = document.createElement("h4");
 	txt.innerHTML = "Social Club Legit? <button type='button' id='sc_legit'>Yes</button> <button type='button' id='sc_notlegit'>No</button> <button type='button' id='sc_clear'>Clear</button>";
 	var searchfilter = document.getElementsByClassName('Search__filter__2wpcM')[0];
@@ -173,6 +174,76 @@ function initRSButtons() {
 	}());
 }
 
+function getCookie(e) {
+	for (var t = e + "=", r = decodeURIComponent(document.cookie).split(";"), o = 0; o < r.length; o++) {
+		for (var n = r[o];
+			" " == n.charAt(0);) n = n.substring(1);
+			if (0 == n.indexOf(t)) return n.substring(t.length, n.length)
+		}
+	return ""
+}
+
+function waitForRSPlayerCards() {
+	var playerCards = document.getElementsByClassName('UI__PlayerCard__text');
+	var playerCardsSize = 0;
+
+	var checkExist = setInterval(function() {
+		playerCards = document.getElementsByClassName('UI__PlayerCard__text');
+		var newCount = playerCards.length;
+		if (playerCards != null && playerCardsSize != newCount) {
+			playerCardsSize = newCount;
+			getRSPlayerRIDs(playerCards);
+			clearInterval(checkExist);
+		}
+    }, 1000); // check every 1000ms
+
+	var oldPath = location.pathname;
+	var checkUpdated = setInterval(function() {
+		if (oldPath !== location.pathname) {
+			oldPath = location.pathname;
+			waitForRSPlayerCards();
+			clearInterval(checkUpdated);
+		}
+    }, 1000); // check every 1000ms
+}
+
+function getRSPlayerRIDs(playerCards) {
+
+	for (var i=0; i < playerCards.length; i++) {
+		var outerdiv = document.createElement('div');
+		outerdiv.className = 'UI__PlayerCard__service';
+		var outerspan = document.createElement('span');
+		outerspan.className = 'markedText';
+		var mark = document.createElement('mark');
+		mark.className = 'UI__MarkText__mark';
+
+		outerspan.appendChild(mark);
+		outerdiv.appendChild(outerspan);
+
+		if (playerCards[i].getElementsByClassName('UI__PlayerCard__username') != null) {
+			var uNameCard = playerCards[i].getElementsByClassName('UI__PlayerCard__username')[0];
+			uNameCard.after(outerdiv);
+			var username = uNameCard.textContent;
+			mark.id = "rid_mark_" + username;
+
+			$.ajax({
+				method: 'GET',
+				url: 'https://scapi.rockstargames.com/profile/getprofile?nickname=' + username + '&maxFriends=3',
+				beforeSend: function(request) {
+					request.setRequestHeader('Authorization', 'Bearer ' + getCookie('BearerToken'));
+					request.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+				}
+			})
+			.done(function(data) {
+				var scid = data.accounts[0].rockstarAccount.rockstarId;
+				var uname = data.accounts[0].rockstarAccount.name;
+				document.getElementById("rid_mark_" + uname).innerHTML = "RID: " + scid;
+
+			});
+		}
+	}
+}
+
 window.addEventListener('load', function() {
 
 	if (location.hostname === hostnameACP) {
@@ -185,7 +256,8 @@ window.addEventListener('load', function() {
 	}
 
 	if (location.hostname === hostnameRS) {
-		initRSButtons();
+		initRSPage();
+		waitForRSPlayerCards();
 	}
 
 }, false);
