@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP ACP Social Club improvements
 // @namespace	https://myself5.de
-// @version		1.0
+// @version		1.0.1
 // @description	Conveniently link to Rockstars SocialClub list and highlight know good/bad SCs.
 // @author		Myself5
 // @match		https://gta5grand.com/admin_*/account/search
@@ -11,6 +11,11 @@
 // @grant		GM_deleteValue
 // ==/UserScript==
 
+// Config
+// weather to use Buttons behind the SC Names or make them clickable through a hyperlink
+var acpUseButtons = true;
+
+// Basevalues, don't touch
 var baseURL = "https://socialclub.rockstargames.com/members/";
 var acpTableCount = "";
 var hostnameRS = 'socialclub.rockstargames.com';
@@ -46,11 +51,18 @@ function initSearchButton() {
 	}());
 }
 
+function openSCWebsite(sc_name) {
+	window.open(baseURL + sc_name);
+}
+
 function redrawSCButtons(sc_fields, sc_names) {
 	var sc_buttons = [];
 	for (var i=0; i < sc_fields.length; i++) {
 		if (sc_names[i].length != 0) {
 			var fontcolor = "";
+			if (!acpUseButtons) {
+				fontcolor = "rgb(85, 160, 200)";
+			}
 			var rsValue = GM_getValue("sc_" + sc_names[i], null);
 			console.log("Checking sc_"+ sc_names[i]);
 			var sc_checked = rsValue != null;
@@ -58,20 +70,32 @@ function redrawSCButtons(sc_fields, sc_names) {
 				var sc_legit = rsValue === "true";
 				console.log("Value for sc_"+ sc_names[i] + " is " + sc_legit);
 				if (sc_legit) {
-					fontcolor = "color='green'";
+					if (acpUseButtons) {
+						fontcolor = "color='green'";
+					} else {
+						fontcolor = "rgb(0, 255, 0)";
+					}
 				} else {
-					fontcolor = "color='red'";
+					if (acpUseButtons) {
+						fontcolor = "color='red'";
+					} else {
+						fontcolor = "rgb(255, 0, 0)";
+					}
 				}
 			}
 
-			sc_fields[i].setHTML("<td><font " + fontcolor + " >" + sc_names[i] + "</font> <button type='button' id='scbutton"+ i + "'>SC Check</button></td>");
-			sc_buttons[i] = document.getElementById('scbutton' + i);
-			(function () {
-				var name = sc_names[i];
-				if (sc_buttons[i] != null) {
-					sc_buttons[i].addEventListener("click", function(){window.open(baseURL + name);}, false);
-				}
-			}());
+			if (acpUseButtons) {
+				sc_fields[i].setHTML("<td><font " + fontcolor + " >" + sc_names[i] + "</font> <button type='button' id='scbutton"+ i + "'>SC Check</button></td>");
+				sc_buttons[i] = document.getElementById('scbutton' + i);
+				(function () {
+					var name = sc_names[i];
+					if (sc_buttons[i] != null) {
+						sc_buttons[i].addEventListener("click", function(){openSCWebsite(name);}, false);
+					}
+				}());
+			} else {
+				sc_fields[i].setHTML("<td><a style='color: " + fontcolor + ";' href='" + baseURL + sc_names[i] + "'>" + sc_names[i] + "</a></td>");
+			}
 		}
 	}
 }
