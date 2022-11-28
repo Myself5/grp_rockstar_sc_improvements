@@ -1,11 +1,12 @@
 // ==UserScript==
 // @name		GrandRP ACP Social Club improvements
 // @namespace	https://myself5.de
-// @version		1.0.5
+// @version		2.0
 // @description	Conveniently link to Rockstars SocialClub list and highlight know good/bad SCs.
 // @author		Myself5
 // @match		https://gta5grand.com/admin_*/account/search
 // @match		https://socialclub.rockstargames.com/members*
+// @match		https://gta5grand.com/admin_de/logs/authorization*
 // @grant		GM_getValue
 // @grant		GM_setValue
 // @grant		GM_deleteValue
@@ -13,21 +14,33 @@
 
 // Config
 // weather to use Buttons behind the SC Names or make them clickable through a hyperlink
-var acpUseButtons = false;
+const acpUseButtons = false;
 
 // Basevalues, don't touch
-var baseURL = "https://socialclub.rockstargames.com/members/";
 var acpTableCount = "";
-var hostnameRS = 'socialclub.rockstargames.com';
-var hostnameACP = 'gta5grand.com';
+const baseURL = "https://socialclub.rockstargames.com/members/";
+const hostnameRS = 'socialclub.rockstargames.com';
+const hostnameACP = 'gta5grand.com';
+const pathAuthLogs = new RegExp('/admin_.*\/logs\/authorization');
+const pathPlayerSearch = new RegExp('/admin_.*\/account\/search');
 
-function waitForInit() {
+const _authLogCount = "body > div.app-layout-canvas > div > main > div > div.row > div";
+const _authLogHeader = "body > div.app-layout-canvas > div > main > div > div:nth-child(2) > div > table > thead > tr > th:nth-child(4)";
+const _authLogTable = "body > div.app-layout-canvas > div > main > div > div:nth-child(2) > div > table > tbody > tr > td:nth-child(4)";
+const authLogSelectors = { count : _authLogCount, header : _authLogHeader, table : _authLogTable};
+
+const _playerSearchCount = "#result_count";
+const _playerSearchHeader = "#result-players-list div:nth-child(2) table tr th:nth-child(6)";
+const _playerSearchTable = "#result-players-list div:nth-child(2) table tr td:nth-child(6)";
+const playerSearchSelectors = { count : _playerSearchCount, header : _playerSearchHeader, table : _playerSearchTable};
+
+function waitForInit(pathSelectors) {
 	var checkExist = setInterval(function() {
-		var newCount = $("#result_count").text().toLowerCase();
+		var newCount = $(pathSelectors.count).text().toLowerCase();
 		if (acpTableCount !== newCount) {
 			acpTableCount = newCount;
-			var sctable = $("#result-players-list div:nth-child(2) table tr td:nth-child(6)");
-			initButtons(sctable, getSCNames(sctable));
+			var sctable = $(pathSelectors.table);
+			initButtons(sctable, getSCNames(sctable), pathSelectors);
 			clearInterval(checkExist);
 		}
 	}, 1000); // check every 1000ms
@@ -41,12 +54,12 @@ function getSCNames(sc_fields) {
 	return sc_namesinternal;
 }
 
-function initSearchButton() {
-	acpTableCount = $("#result_count").text().toLowerCase();
+function initSearchButton(pathSelectors) {
+	acpTableCount = $(pathSelectors.count).text().toLowerCase();
 	var search_button = document.getElementById('search-but');
 	(function () {
 		if (search_button != null) {
-			search_button.addEventListener("click", function(){waitForInit();}, false);
+			search_button.addEventListener("click", function(){waitForInit(pathSelectors);}, false);
 		}
 	}());
 }
@@ -98,15 +111,15 @@ function redrawSCButtons(sc_fields, sc_names) {
 	}
 }
 
-function initButtons(sc_fields, sc_names) {
-	$("#result-players-list div:nth-child(2) table tr th:nth-child(6)")[0].innerHTML = "Social Club <button type='button' id='sccolorredraw'>Color</button>";
+function initButtons(sc_fields, sc_names, pathSelectors) {
+	$(pathSelectors.header)[0].innerHTML = "Social Club <button type='button' id='sccolorredraw'>Color</button>";
 	var sc_colorbutton = document.getElementById('sccolorredraw');
 	if (sc_colorbutton != null) {
 		sc_colorbutton.addEventListener("click", function(){redrawSCButtons(sc_fields, sc_names);}, false);
 	}
 
-	acpTableCount = $("#result_count").text().toLowerCase() + ".";
-	$("#result_count").append(".");
+	acpTableCount = $(pathSelectors.count).text().toLowerCase() + ".";
+	$(pathSelectors.count).append(".");
 
 	redrawSCButtons(sc_fields, sc_names);
 }
@@ -163,7 +176,12 @@ function initRSButtons() {
 window.addEventListener('load', function() {
 
 	if (location.hostname === hostnameACP) {
-		initSearchButton();
+		if (pathPlayerSearch.test(location.pathname)) {
+			initSearchButton(playerSearchSelectors);
+		}
+		if (pathAuthLogs.test(location.pathname)) {
+			waitForInit(authLogSelectors);
+		}
 	}
 
 	if (location.hostname === hostnameRS) {
