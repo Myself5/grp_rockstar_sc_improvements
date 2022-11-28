@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		2.9
+// @version		2.9.1
 // @description	Conveniently link to Rockstars SocialClub list and highlight know good/bad SCs.
 // @author		Myself5
 // @match		https://gta5grand.com/admin_*/account/search
@@ -59,12 +59,57 @@ function getSCNames(sc_fields) {
 	return sc_namesinternal;
 }
 
+function storeACPConfigValues(cbid, value) {
+	// Do nothing, for now
+	console.log("test " + cbid + " value: " + value);
+	var res = value ? "true" : "false";
+	GM_setValue(cbid + "_value", res);
+}
+
 function initSearchButton(pathSelectors) {
 	acpTableCount = $(pathSelectors.count).text().toLowerCase();
 	var search_button = document.getElementById('search-but');
 	(function () {
 		if (search_button != null) {
 			search_button.addEventListener("click", function(){waitForInit(pathSelectors);}, false);
+		}
+	}());
+
+	var optionsbutton = document.createElement('button');
+	optionsbutton.title = "Click to show/hide content";
+	optionsbutton.type = "button";
+	optionsbutton.className = "btn btn-default";
+	optionsbutton.onclick = function(){if(document.getElementById('spoiler') .style.display=='none') {document.getElementById('spoiler') .style.display=''}else{document.getElementById('spoiler') .style.display='none'};}
+	optionsbutton.innerHTML = "Options";
+
+	search_button.after(optionsbutton);
+
+	var optionsspoiler = document.createElement('div');
+	optionsspoiler.id = "spoiler";
+	optionsspoiler.style = "display:none";
+	optionsspoiler.innerHTML = `<br>
+	<input type="checkbox" id="autoProcess">
+	<label for="autoProcess"> Automatically process SC</label><br>
+	<input type="checkbox" id="closeAfterProcess">
+	<label for="closeAfterProcess"> Automatically close after processing SC</label><br>
+	`;
+
+	optionsbutton.after(optionsspoiler);
+
+	var autoProcessCB = document.getElementById('autoProcess');
+	var autoProcessCBValue = GM_getValue(autoProcessCB.id + "_value", "false");
+	autoProcessCB.checked = autoProcessCBValue === "true";
+
+	var closeAfterProcessCB = document.getElementById('closeAfterProcess');
+	var closeAfterProcessCBValue = GM_getValue(closeAfterProcessCB.id + "_value", "false");
+	closeAfterProcessCB.checked = closeAfterProcessCBValue === "true";
+
+	(function () {
+		if (autoProcessCB != null) {
+			autoProcessCB.addEventListener("click", function(){storeACPConfigValues(autoProcessCB.id, autoProcessCB.checked);}, false);
+		}
+		if (closeAfterProcessCB != null) {
+			closeAfterProcessCB.addEventListener("click", function(){storeACPConfigValues(closeAfterProcessCB.id, closeAfterProcessCB.checked);}, false);
 		}
 	}());
 }
@@ -186,7 +231,6 @@ function initRSPage() {
 	var sc_showSCID = document.getElementById(showSCID.id);
 	var sc_showAllSCID = document.getElementById(showAllSCID.id);
 
-
 	sc_colorMatches.checked = colorMatch.value;
 	sc_showSCID.checked = showSCID.value;
 	sc_showAllSCID.checked = showAllSCID.value;
@@ -254,8 +298,6 @@ function processRSPlayerCards(playerCards) {
 		outerdiv.className = 'UI__PlayerCard__service';
 		var textspan = document.createElement('span');
 		textspan.className = 'markedText';
-
-
 
 		if (playerCards[i].getElementsByClassName('UI__PlayerCard__username') != null) {
 			var uNameCard = playerCards[i].getElementsByClassName('UI__PlayerCard__username')[0];
