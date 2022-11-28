@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP ACP Social Club improvements
 // @namespace	https://myself5.de
-// @version		1.0.3
+// @version		1.0.5
 // @description	Conveniently link to Rockstars SocialClub list and highlight know good/bad SCs.
 // @author		Myself5
 // @match		https://gta5grand.com/admin_*/account/search
@@ -64,11 +64,9 @@ function redrawSCButtons(sc_fields, sc_names) {
 				fontcolor = "rgb(85, 160, 200)";
 			}
 			var rsValue = GM_getValue("sc_" + sc_names[i], null);
-			console.log("Checking sc_"+ sc_names[i]);
 			var sc_checked = rsValue != null;
 			if (sc_checked) {
 				var sc_legit = rsValue === "true";
-				console.log("Value for sc_"+ sc_names[i] + " is " + sc_legit);
 				if (sc_legit) {
 					if (acpUseButtons) {
 						fontcolor = "color='green'";
@@ -85,7 +83,7 @@ function redrawSCButtons(sc_fields, sc_names) {
 			}
 
 			if (acpUseButtons) {
-				sc_fields[i].setHTML("<td><font " + fontcolor + " >" + sc_names[i] + "</font> <button type='button' id='scbutton"+ i + "'>SC Check</button></td>");
+				sc_fields[i].innerHTML = "<font " + fontcolor + " >" + sc_names[i] + "</font> <button type='button' id='scbutton"+ i + "'>SC Check</button>";
 				sc_buttons[i] = document.getElementById('scbutton' + i);
 				(function () {
 					var name = sc_names[i];
@@ -94,14 +92,14 @@ function redrawSCButtons(sc_fields, sc_names) {
 					}
 				}());
 			} else {
-				sc_fields[i].setHTML("<td><a style='color: " + fontcolor + ";' href='" + baseURL + sc_names[i] + "/' target='_blank'>" + sc_names[i] + "</a></td>");
+				sc_fields[i].innerHTML ="<a style='color: " + fontcolor + ";' href='" + baseURL + sc_names[i] + "/' target='_blank'>" + sc_names[i] + "</a>";
 			}
 		}
 	}
 }
 
 function initButtons(sc_fields, sc_names) {
-	$("#result-players-list div:nth-child(2) table tr th:nth-child(6)")[0].setHTML("<th>Social Club <button type='button' id='sccolorredraw'>Color</button></th>");
+	$("#result-players-list div:nth-child(2) table tr th:nth-child(6)")[0].innerHTML = "Social Club <button type='button' id='sccolorredraw'>Color</button>";
 	var sc_colorbutton = document.getElementById('sccolorredraw');
 	if (sc_colorbutton != null) {
 		sc_colorbutton.addEventListener("click", function(){redrawSCButtons(sc_fields, sc_names);}, false);
@@ -116,14 +114,12 @@ function initButtons(sc_fields, sc_names) {
 function submitSCResult(name, result) {
 	if (name.length != 0) {
 		var res = result ? "true" : "false";
-		console.log("Storing " + name + " with Value " + res);
 		GM_setValue("sc_" + name, res)
 	}
 }
 
 function ClearSCResult(name) {
 	if (name.length != 0) {
-		console.log("clearing " + name)
 		GM_deleteValue("sc_" + name);
 	}
 }
@@ -133,11 +129,7 @@ function getSBValue() {
 	var searchbox = document.getElementsByClassName('Search__input__2XIsq')[0];
 
 	if (searchbox != null) {
-		console.log("searchbox defined " + searchbox);
 		val = searchbox.value;
-		console.log("searchbox value " + val);
-	} else {
-		console.log("searchbox  undefined");
 	}
 	return val;
 }
