@@ -13,7 +13,7 @@
 
 // Config
 // weather to use Buttons behind the SC Names or make them clickable through a hyperlink
-var acpUseButtons = true;
+var acpUseButtons = false;
 
 // Basevalues, don't touch
 var baseURL = "https://socialclub.rockstargames.com/members/";
