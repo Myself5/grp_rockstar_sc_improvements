@@ -197,10 +197,16 @@ function getSBValue() {
 	return val;
 }
 
-function updateSCCheckboxState(cb, value) {
+function updateSCCheckboxState(cb, value, cbAdj, valueAdj) {
 	var res = value ? "true" : "false";
 	cb.value = value;
 	GM_setValue(cb.id + "_value", res);
+
+	if (cbAdj != null && valueAdj != null && valueAdj) {
+		GM_setValue(cbAdj.id + "_value", res);
+		cbAdj.value = value;
+		document.getElementById(cbAdj.id).checked = value;
+	}
 	waitForRSPlayerCards();
 }
 
@@ -249,10 +255,10 @@ function initRSPage() {
 			sc_colorMatches.addEventListener("click", function(){updateSCCheckboxState(colorMatch, sc_colorMatches.checked);}, false);
 		}
 		if (sc_showSCID != null) {
-			sc_showSCID.addEventListener("click", function(){updateSCCheckboxState(showSCID, sc_showSCID.checked);}, false);
+			sc_showSCID.addEventListener("click", function(){updateSCCheckboxState(showSCID, sc_showSCID.checked, showAllSCID, !sc_showSCID.checked);}, false);
 		}
 		if (sc_showAllSCID != null) {
-			sc_showAllSCID.addEventListener("click", function(){updateSCCheckboxState(showAllSCID, sc_showAllSCID.checked);}, false);
+			sc_showAllSCID.addEventListener("click", function(){updateSCCheckboxState(showAllSCID, sc_showAllSCID.checked, showSCID, sc_showAllSCID.checked);}, false);
 		}
 	}());
 }
