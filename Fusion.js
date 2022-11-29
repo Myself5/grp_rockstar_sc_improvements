@@ -18,9 +18,9 @@
 const acpUseButtons = false;
 
 // Basevalues, don't touch
+// ACP Variables
 var acpTableCount = "";
 const baseURL = "https://socialclub.rockstargames.com/members/";
-const hostnameRS = 'socialclub.rockstargames.com';
 const hostnameACP = 'gta5grand.com';
 const pathAuthLogs = new RegExp('/admin_.*\/logs\/authorization');
 const pathPlayerSearch = new RegExp('/admin_.*\/account\/search');
@@ -34,6 +34,12 @@ const _playerSearchCount = "#result_count";
 const _playerSearchHeader = "#result-players-list div:nth-child(2) table tr th:nth-child(6)";
 const _playerSearchTable = "#result-players-list div:nth-child(2) table tr td:nth-child(6)";
 const playerSearchSelectors = { count : _playerSearchCount, header : _playerSearchHeader, table : _playerSearchTable};
+
+var autoProcess = { id : 'autoProcess', value : GM_getValue("autoProcess_value", "false") === "true"};
+var closeAfterProcess = { id : 'closeAfterProcess', value : GM_getValue("closeAfterProcess_value", "false") === "true"};
+
+// RS Variables
+const hostnameRS = 'socialclub.rockstargames.com';
 
 var colorMatch = { id : 'colorMatch', value : GM_getValue("colorMatch_value", "true") === "true"};
 var showSCID = { id : 'showSCID', value : GM_getValue("showSCID_value", "true") === "true"};
@@ -59,13 +65,6 @@ function getSCNames(sc_fields) {
 	return sc_namesinternal;
 }
 
-function storeACPConfigValues(cbid, value) {
-	// Do nothing, for now
-	console.log("test " + cbid + " value: " + value);
-	var res = value ? "true" : "false";
-	GM_setValue(cbid + "_value", res);
-}
-
 function initSearchButton(pathSelectors) {
 	acpTableCount = $(pathSelectors.count).text().toLowerCase();
 	var search_button = document.getElementById('search-but');
@@ -87,29 +86,27 @@ function initSearchButton(pathSelectors) {
 	var optionsspoiler = document.createElement('div');
 	optionsspoiler.id = "spoiler";
 	optionsspoiler.style = "display:none";
-	optionsspoiler.innerHTML = `<br>
-	<input type="checkbox" id="autoProcess">
-	<label for="autoProcess"> Automatically process SC</label><br>
-	<input type="checkbox" id="closeAfterProcess">
-	<label for="closeAfterProcess"> Automatically close after processing SC</label><br>
-	`;
+	optionsspoiler.innerHTML = "<br>\
+	<input type='checkbox' id=" + autoProcess.id + ">\
+	<label for=" + autoProcess.id + "> Automatically process SC</label><br>\
+	<input type='checkbox' id=" + closeAfterProcess.id + ">\
+	<label for=" + closeAfterProcess.id + "> Automatically close after processing SC</label><br>\
+	";
 
 	optionsbutton.after(optionsspoiler);
 
-	var autoProcessCB = document.getElementById('autoProcess');
-	var autoProcessCBValue = GM_getValue(autoProcessCB.id + "_value", "false");
-	autoProcessCB.checked = autoProcessCBValue === "true";
+	var autoProcessCB = document.getElementById(autoProcess.id);
+	autoProcessCB.checked = autoProcess.value;
 
-	var closeAfterProcessCB = document.getElementById('closeAfterProcess');
-	var closeAfterProcessCBValue = GM_getValue(closeAfterProcessCB.id + "_value", "false");
-	closeAfterProcessCB.checked = closeAfterProcessCBValue === "true";
+	var closeAfterProcessCB = document.getElementById(closeAfterProcess.id);
+	closeAfterProcessCB.checked = closeAfterProcess.value;
 
 	(function () {
 		if (autoProcessCB != null) {
-			autoProcessCB.addEventListener("click", function(){storeACPConfigValues(autoProcessCB.id, autoProcessCB.checked);}, false);
+			autoProcessCB.addEventListener("click", function(){updateCheckboxState(autoProcess, autoProcessCB.checked);}, false);
 		}
 		if (closeAfterProcessCB != null) {
-			closeAfterProcessCB.addEventListener("click", function(){storeACPConfigValues(closeAfterProcessCB.id, closeAfterProcessCB.checked);}, false);
+			closeAfterProcessCB.addEventListener("click", function(){updateCheckboxState(closeAfterProcess, closeAfterProcessCB.checked);}, false);
 		}
 	}());
 }
@@ -155,7 +152,9 @@ function redrawSCButtons(sc_fields, sc_names) {
 					}
 				}());
 			} else {
-				sc_fields[i].innerHTML ="<a style='color: " + fontcolor + ";' href='" + baseURL + sc_names[i] + "/' target='_blank'>" + sc_names[i] + "</a>";
+				sc_fields[i].innerHTML ="<a style='color: " + fontcolor + ";' href='" + baseURL + sc_names[i] + "/' target='_blank'>"
+				+ sc_names[i]
+				+ "</a>";
 			}
 		}
 	}
@@ -197,7 +196,7 @@ function getSBValue() {
 	return val;
 }
 
-function updateSCCheckboxState(cb, value, cbAdj, valueAdj) {
+function updateCheckboxState(cb, value, cbAdj, valueAdj) {
 	var res = value ? "true" : "false";
 	cb.value = value;
 	GM_setValue(cb.id + "_value", res);
@@ -207,7 +206,6 @@ function updateSCCheckboxState(cb, value, cbAdj, valueAdj) {
 		cbAdj.value = value;
 		document.getElementById(cbAdj.id).checked = value;
 	}
-	waitForRSPlayerCards();
 }
 
 function initRSPage() {
@@ -252,13 +250,13 @@ function initRSPage() {
 			sc_clearbutton.addEventListener("click", function(){ClearSCResult(getSBValue());}, false);
 		}
 		if (sc_colorMatches != null) {
-			sc_colorMatches.addEventListener("click", function(){updateSCCheckboxState(colorMatch, sc_colorMatches.checked);}, false);
+			sc_colorMatches.addEventListener("click", function(){updateCheckboxState(colorMatch, sc_colorMatches.checked); waitForRSPlayerCards();}, false);
 		}
 		if (sc_showSCID != null) {
-			sc_showSCID.addEventListener("click", function(){updateSCCheckboxState(showSCID, sc_showSCID.checked, showAllSCID, !sc_showSCID.checked);}, false);
+			sc_showSCID.addEventListener("click", function(){updateCheckboxState(showSCID, sc_showSCID.checked, showAllSCID, !sc_showSCID.checked); waitForRSPlayerCards();}, false);
 		}
 		if (sc_showAllSCID != null) {
-			sc_showAllSCID.addEventListener("click", function(){updateSCCheckboxState(showAllSCID, sc_showAllSCID.checked, showSCID, sc_showAllSCID.checked);}, false);
+			sc_showAllSCID.addEventListener("click", function(){updateCheckboxState(showAllSCID, sc_showAllSCID.checked, showSCID, sc_showAllSCID.checked); waitForRSPlayerCards();}, false);
 		}
 	}());
 }
