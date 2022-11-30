@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		3.0.1
+// @version		3.0.2
 // @description	Conveniently link to Rockstars SocialClub list and highlight know good/bad SCs.
 // @author		Myself5
 // @match		https://gta5grand.com/admin_*/account/search
@@ -286,10 +286,12 @@ function initRSPage() {
 	closeAfterProcess.value = location.search === closeAfterProcessLocationSearch;
 	var txt = document.createElement("h4");
 	txt.innerHTML = "\
+	<div id='" + autoProcess.spoiler + "' style='display:none;'>\
 	Social Club Legit? \
 	<button type='button' id='sc_legit'>Yes</button> \
 	<button type='button' id='sc_notlegit'>No</button> \
 	<button type='button' id='sc_clear'>Clear</button><br>\
+	</div>\
 	<input type='checkbox' id=" + colorMatch.id + "> \
 	<label for=" + colorMatch.id + "> Color Name Match</label> \
 	<input type='checkbox' id=" + showSCID.id + "> \
@@ -317,6 +319,12 @@ function initRSPage() {
 	sc_showSCID.checked = showSCID.value;
 	sc_showAllSCID.checked = showAllSCID.value;
 	sc_autoProcess.checked = autoProcess.value;
+
+	if (!autoProcess.value) {
+		document.getElementById(autoProcess.spoiler).style.display = '';
+	} else {
+		document.getElementById(autoProcess.spoiler).style.display = 'none';
+	}
 
 	(function () {
 		if (sc_legitbutton != null) {
@@ -355,6 +363,11 @@ function initRSPage() {
 		if (sc_autoProcess != null) {
 			sc_autoProcess.addEventListener("click", function(){
 				updateCheckboxState(autoProcess, sc_autoProcess.checked);
+				if (!autoProcess.value) {
+					document.getElementById(autoProcess.spoiler).style.display = '';
+				} else {
+					document.getElementById(autoProcess.spoiler).style.display = 'none';
+				}
 			}, false);
 		}
 	}());
