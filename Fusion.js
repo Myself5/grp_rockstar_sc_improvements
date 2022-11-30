@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		3.0.0
+// @version		3.0.1
 // @description	Conveniently link to Rockstars SocialClub list and highlight know good/bad SCs.
 // @author		Myself5
 // @match		https://gta5grand.com/admin_*/account/search
@@ -209,12 +209,12 @@ function redrawSCButtons(sc_fields, sc_names) {
 				}
 			}
 
-			sc_fields[i].innerHTML ="<a style='color: " + fontcolor + ";' href='" + baseURL + sc_names[i] + "/" + (closeAfterProcess.value ? closeAfterProcessLocationSearch : "") + "' target='_blank'>"
+			sc_fields[i].innerHTML ="<a style='color: " + fontcolor + ";' href='" + baseURL + sc_names[i] + "/" + ((autoProcess.value && closeAfterProcess.value) ? closeAfterProcessLocationSearch : "") + "' target='_blank'>"
 			+ sc_names[i]
 			+ "</a> "
-			+ ((sc_checked && hideButtonOnProcessedNames.value) ? "" : (backgroundProcessButton.value ? "<button type='button' id='bgcheckButton_"+ i + "'>Check</button>" : ""));
+			+ ((sc_checked && hideButtonOnProcessedNames.value) ? "" : ((autoProcess.value && backgroundProcessButton.value) ? "<button type='button' id='bgcheckButton_"+ i + "'>Check</button>" : ""));
 
-			if (backgroundProcessButton.value) {
+			if ((autoProcess.value && backgroundProcessButton.value)) {
 				sc_buttons[i] = document.getElementById('bgcheckButton_' + i);
 				(function () {
 					var name = sc_names[i];
