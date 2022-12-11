@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		4.0.0
+// @version		4.0.1
 // @description	Improve all kinds of ACP and SocialClub features
 // @author		Myself5
 // @match		https://gta5grand.com/admin_*/account/search
@@ -286,10 +286,8 @@ function redrawSCButtons(sc_fields, sc_names) {
 function redrawMoneyFields(tables) {
 	for (var i=0; i < tables.qtty.length; i++) {
 		var fontcolor = "";
-		if (!isNaN(tables.qttyValue[i])) {
-			if (tables.qttyValue[i] > moneyMaxValue) {
-				fontcolor = "rgb(255, 0, 0)";
-			}
+		if (!isNaN(tables.qttyValue[i].value) && tables.qttyValue[i].value > moneyMaxValue) {
+			fontcolor = "rgb(255, 0, 0)";
 		}
 		tables.qtty[i].style.color = fontcolor;
 	}
@@ -322,7 +320,7 @@ function initMoneyFields(tables, pathSelectors) {
 	tables.qttyValue = [];
 
 	for (var i=0; i < tables.qttyText.length; i++) {
-		tables.qttyValue[i] = parseInt(tables.qttyText[i].replace( /^\D+/g, ''));
+		tables.qttyValue[i] = {value : parseInt(tables.qttyText[i].replace( /^\D+/g, '')), outgoing : tables.qttyText[i].startsWith('-')};
 	}
 
 	acpTableCount = $(pathSelectors.count).text().toLowerCase() + ".";
@@ -337,15 +335,16 @@ function initMoneyFields(tables, pathSelectors) {
 		if (!allDates.includes(date)) {
 			allDates.push(date);
 		}
-		var todayBal = tables.qttyValue[i];
+		date = date + (tables.qttyValue[i].outgoing ? "_outgoing" : "");
+		var todayBal = tables.qttyValue[i].value;
 		var playerDateMap = new Map();
 		if (playerMap.has(playerID)) {
 			playerDateMap = playerMap.get(playerID);
 			if (playerDateMap.has(date)) {
 				todayBal += playerDateMap.get(date);
 			}
-			playerDateMap.set(date, todayBal);
 		}
+		playerDateMap.set(date, todayBal);
 		playerMap.set(playerID, playerDateMap);
 	}
 
@@ -395,15 +394,19 @@ function openDailyTotalTable(allDates, playerMap) {
 			td.style.border = '1px solid #ddd';
 			td.style.padding = "10px";
 			var player = playerMap.get(playerKeys[i]);
-			var turnover = 0;
-			if (player.has(allDates[i])) {
-				turnover = player.get(allDates[j]);
+			var incoming = 0;
+			var outgoing = 0;
+			if (player.has(allDates[j])) {
+				incoming = player.get(allDates[j]);
+			}
+			if (player.has(allDates[j] + "_outgoing")) {
+				outgoing = player.get(allDates[j] + "_outgoing");
 			}
 			var fontcolor = "";
-			if (turnover > moneyMaxValue) {
+			if (incoming > moneyMaxValue || outgoing > moneyMaxValue) {
 				fontcolor = "rgb(255, 0, 0)";
 			}
-			td.innerHTML = "<a style='color: " + fontcolor + ";'>$" + turnover +"</a>";
+			td.innerHTML = "<a style='color: " + fontcolor + ";'>Incoming: $" + incoming +"<br> Outgoing: $" + outgoing + "</a>";
 		}
 	}
 	var newWindow = window.open();
