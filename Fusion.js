@@ -1,12 +1,12 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		3.0.3
+// @version		3.0.4
 // @description	Conveniently link to Rockstars SocialClub list and highlight know good/bad SCs.
 // @author		Myself5
 // @match		https://gta5grand.com/admin_*/account/search
 // @match		https://socialclub.rockstargames.com/members*
-// @match		https://gta5grand.com/admin_de/logs/authorization*
+// @match		https://gta5grand.com/admin_*/logs/authorization*
 // @grant		GM_getValue
 // @grant		GM_setValue
 // @grant		GM_deleteValue
