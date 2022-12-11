@@ -66,7 +66,7 @@ function getSCNames(sc_fields) {
 	return sc_namesinternal;
 }
 
-function initSearchButton(pathSelectors) {
+function initSearchButton(pathSelectors, button_listener) {
 	acpTableCount = $(pathSelectors.count).text().toLowerCase();
 	var search_button;
 	// Search Button on Auto an money logs is not labled, search by class and type
@@ -79,11 +79,13 @@ function initSearchButton(pathSelectors) {
 		}
 	}
 
-	(function () {
-		if (search_button != null) {
-			search_button.addEventListener("click", function(){waitForInit(pathSelectors);}, false);
-		}
-	}());
+	if (button_listener) {
+		(function () {
+			if (search_button != null) {
+				search_button.addEventListener("click", function(){waitForInit(pathSelectors);}, false);
+			}
+		}());
+	}
 
 	var optionsbutton = document.createElement('button');
 	optionsbutton.title = "Click to show/hide content";
@@ -147,6 +149,10 @@ function initSearchButton(pathSelectors) {
 	(function () {
 		initACPOptions(autoProcessCB, closeAfterProcessCB, backgroundProcessButtonCB, hideButtonOnProcessedNamesCB);
 	}());
+
+	if (!button_listener) {
+		waitForInit(pathSelectors);
+	}
 }
 
 function initACPOptions(autoProcessCB, closeAfterProcessCB, backgroundProcessButtonCB, hideButtonOnProcessedNamesCB, sc_fields, sc_names) {
@@ -504,10 +510,10 @@ window.addEventListener('load', function() {
 
 	if (location.hostname === hostnameACP) {
 		if (pathPlayerSearch.test(location.pathname)) {
-			initSearchButton(playerSearchSelectors);
+			initSearchButton(playerSearchSelectors, true);
 		}
 		if (pathAuthLogs.test(location.pathname)) {
-			waitForInit(authLogSelectors);
+			initSearchButton(authLogSelectors, false);
 		}
 	}
 
