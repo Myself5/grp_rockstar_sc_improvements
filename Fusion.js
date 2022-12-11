@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		3.0.2
+// @version		3.0.3
 // @description	Conveniently link to Rockstars SocialClub list and highlight know good/bad SCs.
 // @author		Myself5
 // @match		https://gta5grand.com/admin_*/account/search
@@ -68,7 +68,17 @@ function getSCNames(sc_fields) {
 
 function initSearchButton(pathSelectors) {
 	acpTableCount = $(pathSelectors.count).text().toLowerCase();
-	var search_button = document.getElementById('search-but');
+	var search_button;
+	// Search Button on Auto an money logs is not labled, search by class and type
+	// search_button = document.getElementById('search-but');
+	var buttons = document.getElementsByClassName('btn btn-default');
+
+	for (var i=0; i < buttons.length; i++) {
+		if (buttons[i].type === 'submit') {
+			search_button = buttons[i];
+		}
+	}
+
 	(function () {
 		if (search_button != null) {
 			search_button.addEventListener("click", function(){waitForInit(pathSelectors);}, false);
