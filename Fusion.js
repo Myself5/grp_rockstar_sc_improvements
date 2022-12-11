@@ -1,12 +1,13 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		3.0.4
-// @description	Conveniently link to Rockstars SocialClub list and highlight know good/bad SCs.
+// @version		4.0.0
+// @description	Improve all kinds of ACP and SocialClub features
 // @author		Myself5
 // @match		https://gta5grand.com/admin_*/account/search
 // @match		https://socialclub.rockstargames.com/members*
 // @match		https://gta5grand.com/admin_*/logs/authorization*
+// @match		https://gta5grand.com/admin_*/logs/money*
 // @grant		GM_getValue
 // @grant		GM_setValue
 // @grant		GM_deleteValue
@@ -22,22 +23,52 @@ var acpTableCount = "";
 const baseURL = "https://socialclub.rockstargames.com/members/";
 const hostnameACP = 'gta5grand.com';
 const pathAuthLogs = new RegExp('/admin_.*\/logs\/authorization');
+const pathMoneyLogs = new RegExp('/admin_.*\/logs\/money');
 const pathPlayerSearch = new RegExp('/admin_.*\/account\/search');
+const moneyMaxValue = 5000000;
+
+const _selectorTypes = {socialclub : 0, money : 1};
 
 const _authLogCount = "body > div.app-layout-canvas > div > main > div > div.row > div";
 const _authLogHeader = "body > div.app-layout-canvas > div > main > div > div:nth-child(2) > div > table > thead > tr > th:nth-child(4)";
 const _authLogTable = "body > div.app-layout-canvas > div > main > div > div:nth-child(2) > div > table > tbody > tr > td:nth-child(4)";
-const authLogSelectors = { count : _authLogCount, header : _authLogHeader, table : _authLogTable};
+const authLogSelectors = { count : _authLogCount, header : _authLogHeader, table : _authLogTable, type : _selectorTypes.socialclub};
+
+const _moneyLogCount = "body > div.app-layout-canvas > div > main > div > div.row > div";
+const _moneyLogHeader = "body > div.app-layout-canvas > div > main > div > div:nth-child(2) > div > table > thead > tr > th:nth-child(4)";
+const _moneyLogNameTable = "body > div.app-layout-canvas > div > main > div > div:nth-child(2) > div > table > tbody > tr > td:nth-child(1) > a";
+const _moneyLogDateTable = "body > div.app-layout-canvas > div > main > div > div:nth-child(2) > div > table > tbody > tr > td:nth-child(2)";
+const _moneyLogQttyTable = "body > div.app-layout-canvas > div > main > div > div:nth-child(2) > div > table > tbody > tr > td:nth-child(4)";
+const moneyLogSelectors = { count : _moneyLogCount, header : _moneyLogHeader, nametable : _moneyLogNameTable, datetable : _moneyLogDateTable, qttytable : _moneyLogQttyTable, type : _selectorTypes.money};
 
 const _playerSearchCount = "#result_count";
 const _playerSearchHeader = "#result-players-list div:nth-child(2) table tr th:nth-child(6)";
 const _playerSearchTable = "#result-players-list div:nth-child(2) table tr td:nth-child(6)";
-const playerSearchSelectors = { count : _playerSearchCount, header : _playerSearchHeader, table : _playerSearchTable};
+const playerSearchSelectors = { count : _playerSearchCount, header : _playerSearchHeader, table : _playerSearchTable, type : _selectorTypes.socialclub};
 
 var autoProcess = { id : 'autoProcess', value : GM_getValue("autoProcess_value", "false") === "true", spoiler: 'autoProcessOptions'};
 var closeAfterProcess = { id : 'closeAfterProcess', value : GM_getValue("closeAfterProcess_value", "false") === "true"};
 var backgroundProcessButton = { id : 'backgroundProcessButton', value : GM_getValue("backgroundProcessButton_value", "false") === "true"};
 var hideButtonOnProcessedNames = { id : 'hideButtonOnProcessedNames', value : GM_getValue("hideButtonOnProcessedNames_value", "false") === "true", spoiler : 'hideButtonOnProcessedNamesSpoiler'};
+
+const scOptionsSpoiler = "<br>\
+<input type='checkbox' id=" + autoProcess.id + ">\
+<label for=" + autoProcess.id + "> Automatically process SC</label><br>\
+<div id='" + autoProcess.spoiler + "' style='display:none;'>\
+<input type='checkbox' id=" + closeAfterProcess.id + ">\
+<label for=" + closeAfterProcess.id + "> Automatically close after processing SC</label><br>\
+<input type='checkbox' id=" + backgroundProcessButton.id + ">\
+<label for=" + backgroundProcessButton.id + "> Show Button to process SC in Background</label><br>\
+<div id='" + hideButtonOnProcessedNames.spoiler + "' style='display:none;'>\
+<input type='checkbox' id=" + hideButtonOnProcessedNames.id + ">\
+<label for=" + hideButtonOnProcessedNames.id + "> Hide Button on previously processed SCs</label><br>\
+</div>\
+</div>\
+";
+
+const moneyOptionsSpoiler = "Currently Empty";
+
+const optionSpoilerTypes = [scOptionsSpoiler, moneyOptionsSpoiler];
 
 // RS Variables
 const hostnameRS = 'socialclub.rockstargames.com';
@@ -51,19 +82,27 @@ function waitForInit(pathSelectors) {
 		var newCount = $(pathSelectors.count).text().toLowerCase();
 		if (acpTableCount !== newCount) {
 			acpTableCount = newCount;
-			var sctable = $(pathSelectors.table);
-			initButtons(sctable, getSCNames(sctable), pathSelectors);
+			if (pathSelectors.type == _selectorTypes.socialclub) {
+				var sctable = $(pathSelectors.table);
+				initSCButtons(sctable, getTableValues(sctable), pathSelectors);
+			} else if (pathSelectors.type == _selectorTypes.money) {
+				var tables = {};
+				tables.nameField = $(pathSelectors.nametable);
+				tables.dateText = getTableValues($(pathSelectors.datetable));
+				tables.qtty = $(pathSelectors.qttytable);
+				initMoneyFields(tables, pathSelectors);
+			}
 			clearInterval(checkExist);
 		}
 	}, 1000); // check every 1000ms
 }
 
-function getSCNames(sc_fields) {
-	var sc_namesinternal = [];
-	for (var i=0; i < sc_fields.length; i++) {
-		sc_namesinternal[i] = sc_fields[i].textContent;
+function getTableValues(table) {
+	var tableinternal = [];
+	for (var i=0; i < table.length; i++) {
+		tableinternal[i] = table[i].textContent;
 	}
-	return sc_namesinternal;
+	return tableinternal;
 }
 
 function initSearchButton(pathSelectors, button_listener) {
@@ -105,23 +144,22 @@ function initSearchButton(pathSelectors, button_listener) {
 	var optionsspoiler = document.createElement('div');
 	optionsspoiler.id = "optionsspoiler";
 	optionsspoiler.style = "display:none";
-	optionsspoiler.innerHTML = "<br>\
-	<input type='checkbox' id=" + autoProcess.id + ">\
-	<label for=" + autoProcess.id + "> Automatically process SC</label><br>\
-	<div id='" + autoProcess.spoiler + "' style='display:none;'>\
-	<input type='checkbox' id=" + closeAfterProcess.id + ">\
-	<label for=" + closeAfterProcess.id + "> Automatically close after processing SC</label><br>\
-	<input type='checkbox' id=" + backgroundProcessButton.id + ">\
-	<label for=" + backgroundProcessButton.id + "> Show Button to process SC in Background</label><br>\
-	<div id='" + hideButtonOnProcessedNames.spoiler + "' style='display:none;'>\
-	<input type='checkbox' id=" + hideButtonOnProcessedNames.id + ">\
-	<label for=" + hideButtonOnProcessedNames.id + "> Hide Button on previously processed SCs</label><br>\
-	</div>\
-	</div>\
-	";
+	optionsspoiler.innerHTML = optionSpoilerTypes[pathSelectors.type];
 
 	optionsbutton.after(optionsspoiler);
 
+	if (pathSelectors.type == _selectorTypes.socialclub) {
+		initSCOptionsBoxes();
+	} else if (pathSelectors.type == _selectorTypes.money) {
+		initMoneyOptionsBoxes();
+	}
+
+	if (!button_listener) {
+		waitForInit(pathSelectors);
+	}
+}
+
+function initSCOptionsBoxes() {
 	var autoProcessCB = document.getElementById(autoProcess.id);
 	autoProcessCB.checked = autoProcess.value;
 
@@ -149,10 +187,10 @@ function initSearchButton(pathSelectors, button_listener) {
 	(function () {
 		initACPOptions(autoProcessCB, closeAfterProcessCB, backgroundProcessButtonCB, hideButtonOnProcessedNamesCB);
 	}());
+}
 
-	if (!button_listener) {
-		waitForInit(pathSelectors);
-	}
+function initMoneyOptionsBoxes() {
+	// do nothing for now
 }
 
 function initACPOptions(autoProcessCB, closeAfterProcessCB, backgroundProcessButtonCB, hideButtonOnProcessedNamesCB, sc_fields, sc_names) {
@@ -245,7 +283,19 @@ function redrawSCButtons(sc_fields, sc_names) {
 	}
 }
 
-function initButtons(sc_fields, sc_names, pathSelectors) {
+function redrawMoneyFields(tables) {
+	for (var i=0; i < tables.qtty.length; i++) {
+		var fontcolor = "";
+		if (!isNaN(tables.qttyValue[i])) {
+			if (tables.qttyValue[i] > moneyMaxValue) {
+				fontcolor = "rgb(255, 0, 0)";
+			}
+		}
+		tables.qtty[i].style.color = fontcolor;
+	}
+}
+
+function initSCButtons(sc_fields, sc_names, pathSelectors) {
 	$(pathSelectors.header)[0].innerHTML = "Social Club <button type='button' id='sccolorredraw'>Update</button>";
 	var sc_colorbutton = document.getElementById('sccolorredraw');
 	if (sc_colorbutton != null) {
@@ -265,6 +315,99 @@ function initButtons(sc_fields, sc_names, pathSelectors) {
 	$(pathSelectors.count).append(".");
 
 	redrawSCButtons(sc_fields, sc_names);
+}
+
+function initMoneyFields(tables, pathSelectors) {
+	tables.qttyText = getTableValues(tables.qtty);
+	tables.qttyValue = [];
+
+	for (var i=0; i < tables.qttyText.length; i++) {
+		tables.qttyValue[i] = parseInt(tables.qttyText[i].replace( /^\D+/g, ''));
+	}
+
+	acpTableCount = $(pathSelectors.count).text().toLowerCase() + ".";
+	$(pathSelectors.count).append(".");
+
+	var playerMap = new Map();
+	var allDates = [];
+	for (var i = 0; i < tables.qtty.length; i++) {
+		var hrefSplit = tables.nameField[i].href.split('/');
+		var playerID = tables.nameField[i].text + " (" + hrefSplit[hrefSplit.length - 1 ] + ")";
+		var date = tables.dateText[i].split(' ')[0];
+		if (!allDates.includes(date)) {
+			allDates.push(date);
+		}
+		var todayBal = tables.qttyValue[i];
+		var playerDateMap = new Map();
+		if (playerMap.has(playerID)) {
+			playerDateMap = playerMap.get(playerID);
+			if (playerDateMap.has(date)) {
+				todayBal += playerDateMap.get(date);
+			}
+			playerDateMap.set(date, todayBal);
+		}
+		playerMap.set(playerID, playerDateMap);
+	}
+
+	$(pathSelectors.header)[0].innerHTML = "Quantity <button type='button' id='sumMoneyButton'>Sum</button>";
+	var sumMoneyButton = document.getElementById('sumMoneyButton');
+	if (sumMoneyButton != null) {
+		sumMoneyButton.addEventListener("click", function(){
+			openDailyTotalTable(allDates, playerMap);
+		}, false);
+	}
+
+	redrawMoneyFields(tables);
+}
+
+function openDailyTotalTable(allDates, playerMap) {
+	var tbl = document.createElement('table'),
+	header = tbl.createTHead();
+	playerKeys = Array.from(playerMap.keys());
+	tbl.width = "90%";
+	tbl.align = "center";
+	tbl.style.textAlign = "center";
+	tbl.style.border = '1px solid #ddd';
+	tbl.style.borderCollapse = "collapse";
+
+	var headerRow = header.insertRow();
+
+	var cell = headerRow.insertCell();
+	cell.innerHTML = "<b>Name/Date</b>";
+	cell.style.border = '1px solid #ddd';
+	cell.style.padding = "10px";
+
+	for (let i = 0; i < allDates.length; i++) {
+		var cell = headerRow.insertCell();
+		cell.innerHTML = "<b>" + allDates[i] + "</b>";
+		cell.style.border = '1px solid #ddd';
+		cell.style.padding = "10px";
+	}
+
+	for (let i = 0; i < playerKeys.length; i++) {
+		const tr = tbl.insertRow();
+		var cell = tr.insertCell();
+		cell.innerHTML = "<b>" + playerKeys[i] + "</b>";
+		cell.style.border = '1px solid #ddd';
+		cell.style.padding = "10px";
+		for (let j = 0; j < allDates.length; j++) {
+			const td = tr.insertCell();
+			td.style.border = '1px solid #ddd';
+			td.style.padding = "10px";
+			var player = playerMap.get(playerKeys[i]);
+			var turnover = 0;
+			if (player.has(allDates[i])) {
+				turnover = player.get(allDates[j]);
+			}
+			var fontcolor = "";
+			if (turnover > moneyMaxValue) {
+				fontcolor = "rgb(255, 0, 0)";
+			}
+			td.innerHTML = "<a style='color: " + fontcolor + ";'>$" + turnover +"</a>";
+		}
+	}
+	var newWindow = window.open();
+	newWindow.document.body.appendChild(tbl);
 }
 
 function submitSCResult(name, result) {
@@ -451,7 +594,7 @@ function processRSPlayerCards(playerCards) {
 		return
 	}
 	for (var i=0; i < playerCards.length; i++) {
-		
+
 		var outerdiv = document.createElement('div');
 		outerdiv.className = 'UI__PlayerCard__service';
 		var textspan = document.createElement('span');
@@ -514,6 +657,9 @@ window.addEventListener('load', function() {
 		}
 		if (pathAuthLogs.test(location.pathname)) {
 			initSearchButton(authLogSelectors, false);
+		}
+		if (pathMoneyLogs.test(location.pathname)) {
+			initSearchButton(moneyLogSelectors, false);
 		}
 	}
 
