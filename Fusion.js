@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		4.0.1
+// @version		4.0.2
 // @description	Improve all kinds of ACP and SocialClub features
 // @author		Myself5
 // @match		https://gta5grand.com/admin_*/account/search
@@ -106,7 +106,6 @@ function getTableValues(table) {
 }
 
 function initSearchButton(pathSelectors, button_listener) {
-	acpTableCount = $(pathSelectors.count).text().toLowerCase();
 	var search_button;
 	// Search Button on Auto an money logs is not labled, search by class and type
 	// search_button = document.getElementById('search-but');
@@ -119,6 +118,7 @@ function initSearchButton(pathSelectors, button_listener) {
 	}
 
 	if (button_listener) {
+		acpTableCount = $(pathSelectors.count).text().toLowerCase();
 		(function () {
 			if (search_button != null) {
 				search_button.addEventListener("click", function(){waitForInit(pathSelectors);}, false);
