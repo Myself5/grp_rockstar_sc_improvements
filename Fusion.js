@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		4.1.2
+// @version		4.1.3
 // @description	Improve all kinds of ACP and SocialClub features
 // @author		Myself5
 // @updateURL	https://g.m5.cx/Fusion.js
@@ -24,6 +24,7 @@ const closeAfterProcessLocationSearch = "?closeAfterProcess";
 var acpTableCount = "";
 const baseURL = "https://socialclub.rockstargames.com/members/";
 const hostnameACP = 'gta5grand.com';
+const acpTableDummy = 'https://gta5grand.com/acptable';
 const pathAuthLogs = new RegExp('/admin_.*\/logs\/authorization');
 const pathMoneyLogs = new RegExp('/admin_.*\/logs\/money');
 const pathPlayerSearch = new RegExp('/admin_.*\/account\/search');
@@ -497,11 +498,13 @@ function openDailyTotalTable(moneyData) {
 			td.innerHTML = "<a style='color: " + fontcolor + ";'>Incoming: $" + totalTdy.incoming + "<br> Outgoing: $" + totalTdy.outgoing + "</a>";
 		}
 	})
-	var newWindow = window.open();
+	var newWindow = window.open(acpTableDummy);
 	newWindow.document.head.innerHTML =
 		'<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">\
 		<style> @import url("https://fonts.googleapis.com/css2?family=Roboto&display=swap"); </style>'
-	newWindow.document.body.appendChild(tbl);
+	var bdy = document.createElement('body');
+	bdy.appendChild(tbl);
+	newWindow.document.body = bdy;
 }
 
 function submitSCResult(name, result) {
