@@ -29,29 +29,29 @@ const pathMoneyLogs = new RegExp('/admin_.*\/logs\/money');
 const pathPlayerSearch = new RegExp('/admin_.*\/account\/search');
 const moneyMaxValue = 5000000;
 
-const _selectorTypes = {socialclub : 0, money : 1};
+const _selectorTypes = { socialclub: 0, money: 1 };
 
 const _authLogCount = "body > div.app-layout-canvas > div > main > div > div.row > div";
 const _authLogHeader = "body > div.app-layout-canvas > div > main > div > div:nth-child(2) > div > table > thead > tr > th:nth-child(4)";
 const _authLogTable = "body > div.app-layout-canvas > div > main > div > div:nth-child(2) > div > table > tbody > tr > td:nth-child(4)";
-const authLogSelectors = { count : _authLogCount, header : _authLogHeader, table : _authLogTable, type : _selectorTypes.socialclub};
+const authLogSelectors = { count: _authLogCount, header: _authLogHeader, table: _authLogTable, type: _selectorTypes.socialclub };
 
 const _moneyLogCount = "body > div.app-layout-canvas > div > main > div > div.row > div";
 const _moneyLogHeader = "body > div.app-layout-canvas > div > main > div > div:nth-child(2) > div > table > thead > tr > th:nth-child(4)";
 const _moneyLogNameTable = "body > div.app-layout-canvas > div > main > div > div:nth-child(2) > div > table > tbody > tr > td:nth-child(1) > a";
 const _moneyLogDateTable = "body > div.app-layout-canvas > div > main > div > div:nth-child(2) > div > table > tbody > tr > td:nth-child(2)";
 const _moneyLogQttyTable = "body > div.app-layout-canvas > div > main > div > div:nth-child(2) > div > table > tbody > tr > td:nth-child(4)";
-const moneyLogSelectors = { count : _moneyLogCount, header : _moneyLogHeader, nametable : _moneyLogNameTable, datetable : _moneyLogDateTable, qttytable : _moneyLogQttyTable, type : _selectorTypes.money};
+const moneyLogSelectors = { count: _moneyLogCount, header: _moneyLogHeader, nametable: _moneyLogNameTable, datetable: _moneyLogDateTable, qttytable: _moneyLogQttyTable, type: _selectorTypes.money };
 
 const _playerSearchCount = "#result_count";
 const _playerSearchHeader = "#result-players-list div:nth-child(2) table tr th:nth-child(6)";
 const _playerSearchTable = "#result-players-list div:nth-child(2) table tr td:nth-child(6)";
-const playerSearchSelectors = { count : _playerSearchCount, header : _playerSearchHeader, table : _playerSearchTable, type : _selectorTypes.socialclub};
+const playerSearchSelectors = { count: _playerSearchCount, header: _playerSearchHeader, table: _playerSearchTable, type: _selectorTypes.socialclub };
 
-var autoProcess = { id : 'autoProcess', value : GM_getValue("autoProcess_value", "false") === "true", spoiler: 'autoProcessOptions'};
-var closeAfterProcess = { id : 'closeAfterProcess', value : GM_getValue("closeAfterProcess_value", "false") === "true"};
-var backgroundProcessButton = { id : 'backgroundProcessButton', value : GM_getValue("backgroundProcessButton_value", "false") === "true"};
-var hideButtonOnProcessedNames = { id : 'hideButtonOnProcessedNames', value : GM_getValue("hideButtonOnProcessedNames_value", "false") === "true", spoiler : 'hideButtonOnProcessedNamesSpoiler'};
+var autoProcess = { id: 'autoProcess', value: GM_getValue("autoProcess_value", "false") === "true", spoiler: 'autoProcessOptions' };
+var closeAfterProcess = { id: 'closeAfterProcess', value: GM_getValue("closeAfterProcess_value", "false") === "true" };
+var backgroundProcessButton = { id: 'backgroundProcessButton', value: GM_getValue("backgroundProcessButton_value", "false") === "true" };
+var hideButtonOnProcessedNames = { id: 'hideButtonOnProcessedNames', value: GM_getValue("hideButtonOnProcessedNames_value", "false") === "true", spoiler: 'hideButtonOnProcessedNamesSpoiler' };
 
 const scOptionsSpoiler = "<br>\
 <input type='checkbox' id=" + autoProcess.id + ">\
@@ -75,12 +75,12 @@ const optionSpoilerTypes = [scOptionsSpoiler, moneyOptionsSpoiler];
 // RS Variables
 const hostnameRS = 'socialclub.rockstargames.com';
 
-var colorMatch = { id : 'colorMatch', value : GM_getValue("colorMatch_value", "true") === "true"};
-var showSCID = { id : 'showSCID', value : GM_getValue("showSCID_value", "true") === "true"};
-var showAllSCID = { id : 'showAllSCID', value : GM_getValue("showAllSCID_value", "false") === "true"};
+var colorMatch = { id: 'colorMatch', value: GM_getValue("colorMatch_value", "true") === "true" };
+var showSCID = { id: 'showSCID', value: GM_getValue("showSCID_value", "true") === "true" };
+var showAllSCID = { id: 'showAllSCID', value: GM_getValue("showAllSCID_value", "false") === "true" };
 
 function waitForInit(pathSelectors) {
-	var checkExist = setInterval(function() {
+	var checkExist = setInterval(function () {
 		var newCount = $(pathSelectors.count).text().toLowerCase();
 		if (acpTableCount !== newCount) {
 			acpTableCount = newCount;
@@ -101,7 +101,7 @@ function waitForInit(pathSelectors) {
 
 function getTableValues(table) {
 	var tableinternal = [];
-	for (var i=0; i < table.length; i++) {
+	for (var i = 0; i < table.length; i++) {
 		tableinternal[i] = table[i].textContent;
 	}
 	return tableinternal;
@@ -113,7 +113,7 @@ function initSearchButton(pathSelectors, button_listener) {
 	// search_button = document.getElementById('search-but');
 	var buttons = document.getElementsByClassName('btn btn-default');
 
-	for (var i=0; i < buttons.length; i++) {
+	for (var i = 0; i < buttons.length; i++) {
 		if (buttons[i].type === 'submit') {
 			search_button = buttons[i];
 		}
@@ -123,7 +123,7 @@ function initSearchButton(pathSelectors, button_listener) {
 		acpTableCount = $(pathSelectors.count).text().toLowerCase();
 		(function () {
 			if (search_button != null) {
-				search_button.addEventListener("click", function(){waitForInit(pathSelectors);}, false);
+				search_button.addEventListener("click", function () { waitForInit(pathSelectors); }, false);
 			}
 		}());
 	}
@@ -132,7 +132,7 @@ function initSearchButton(pathSelectors, button_listener) {
 	optionsbutton.title = "Click to show/hide content";
 	optionsbutton.type = "button";
 	optionsbutton.className = "btn btn-default";
-	optionsbutton.onclick = function(){
+	optionsbutton.onclick = function () {
 		if (document.getElementById('optionsspoiler').style.display == 'none') {
 			document.getElementById('optionsspoiler').style.display = '';
 		} else {
@@ -197,7 +197,7 @@ function initMoneyOptionsBoxes() {
 
 function initACPOptions(autoProcessCB, closeAfterProcessCB, backgroundProcessButtonCB, hideButtonOnProcessedNamesCB, sc_fields, sc_names) {
 	if (autoProcessCB != null) {
-		autoProcessCB.addEventListener("click", function(){
+		autoProcessCB.addEventListener("click", function () {
 			updateCheckboxState(autoProcess, autoProcessCB.checked);
 			if (autoProcessCB.checked) {
 				document.getElementById(autoProcess.spoiler).style.display = '';
@@ -210,7 +210,7 @@ function initACPOptions(autoProcessCB, closeAfterProcessCB, backgroundProcessBut
 		}, false);
 	}
 	if (closeAfterProcessCB != null) {
-		closeAfterProcessCB.addEventListener("click", function(){
+		closeAfterProcessCB.addEventListener("click", function () {
 			updateCheckboxState(closeAfterProcess, closeAfterProcessCB.checked, backgroundProcessButton, closeAfterProcessCB.checked, false);
 			if (sc_fields != null && sc_names != null) {
 				redrawSCButtons(sc_fields, sc_names);
@@ -219,7 +219,7 @@ function initACPOptions(autoProcessCB, closeAfterProcessCB, backgroundProcessBut
 	}
 
 	if (backgroundProcessButtonCB != null) {
-		backgroundProcessButtonCB.addEventListener("click", function(){
+		backgroundProcessButtonCB.addEventListener("click", function () {
 			updateCheckboxState(backgroundProcessButton, backgroundProcessButtonCB.checked, closeAfterProcess, backgroundProcessButtonCB.checked, false);
 			if (backgroundProcessButtonCB.checked) {
 				document.getElementById(hideButtonOnProcessedNames.spoiler).style.display = '';
@@ -233,7 +233,7 @@ function initACPOptions(autoProcessCB, closeAfterProcessCB, backgroundProcessBut
 	}
 
 	if (hideButtonOnProcessedNamesCB != null) {
-		hideButtonOnProcessedNamesCB.addEventListener("click", function(){
+		hideButtonOnProcessedNamesCB.addEventListener("click", function () {
 			updateCheckboxState(hideButtonOnProcessedNames, hideButtonOnProcessedNamesCB.checked);
 			if (sc_fields != null && sc_names != null) {
 				redrawSCButtons(sc_fields, sc_names);
@@ -251,7 +251,7 @@ function bgCheckSC(sc_name) {
 
 function redrawSCButtons(sc_fields, sc_names) {
 	var sc_buttons = [];
-	for (var i=0; i < sc_fields.length; i++) {
+	for (var i = 0; i < sc_fields.length; i++) {
 		if (sc_names[i].length != 0) {
 			var fontcolor = "rgb(85, 160, 200)";
 			var rsValue = GM_getValue("sc_" + sc_names[i], null);
@@ -265,17 +265,17 @@ function redrawSCButtons(sc_fields, sc_names) {
 				}
 			}
 
-			sc_fields[i].innerHTML ="<a style='color: " + fontcolor + ";' href='" + baseURL + sc_names[i] + "/" + ((autoProcess.value && closeAfterProcess.value) ? closeAfterProcessLocationSearch : "") + "' target='_blank'>"
-			+ sc_names[i]
-			+ "</a> "
-			+ ((sc_checked && hideButtonOnProcessedNames.value) ? "" : ((autoProcess.value && backgroundProcessButton.value) ? "<button type='button' id='bgcheckButton_"+ i + "'>Check</button>" : ""));
+			sc_fields[i].innerHTML = "<a style='color: " + fontcolor + ";' href='" + baseURL + sc_names[i] + "/" + ((autoProcess.value && closeAfterProcess.value) ? closeAfterProcessLocationSearch : "") + "' target='_blank'>"
+				+ sc_names[i]
+				+ "</a> "
+				+ ((sc_checked && hideButtonOnProcessedNames.value) ? "" : ((autoProcess.value && backgroundProcessButton.value) ? "<button type='button' id='bgcheckButton_" + i + "'>Check</button>" : ""));
 
 			if ((autoProcess.value && backgroundProcessButton.value)) {
 				sc_buttons[i] = document.getElementById('bgcheckButton_' + i);
 				(function () {
 					var name = sc_names[i];
 					if (sc_buttons[i] != null) {
-						sc_buttons[i].addEventListener("click", function(){
+						sc_buttons[i].addEventListener("click", function () {
 							bgCheckSC(name);
 						}, false);
 					}
@@ -286,7 +286,7 @@ function redrawSCButtons(sc_fields, sc_names) {
 }
 
 function redrawMoneyFields(tables) {
-	for (var i=0; i < tables.qtty.length; i++) {
+	for (var i = 0; i < tables.qtty.length; i++) {
 		var fontcolor = "";
 		if (!isNaN(tables.qttyValue[i].value) && tables.qttyValue[i].value > moneyMaxValue) {
 			fontcolor = "rgb(255, 0, 0)";
@@ -299,7 +299,7 @@ function initSCButtons(sc_fields, sc_names, pathSelectors) {
 	$(pathSelectors.header)[0].innerHTML = "Social Club <button type='button' id='sccolorredraw'>Update</button>";
 	var sc_colorbutton = document.getElementById('sccolorredraw');
 	if (sc_colorbutton != null) {
-		sc_colorbutton.addEventListener("click", function(){
+		sc_colorbutton.addEventListener("click", function () {
 			redrawSCButtons(sc_fields, sc_names);
 		}, false);
 	}
@@ -321,8 +321,8 @@ function initMoneyFields(tables, pathSelectors) {
 	tables.qttyText = getTableValues(tables.qtty);
 	tables.qttyValue = [];
 
-	for (var i=0; i < tables.qttyText.length; i++) {
-		tables.qttyValue[i] = {value : parseInt(tables.qttyText[i].replace( /^\D+/g, '')), outgoing : tables.qttyText[i].startsWith('-')};
+	for (var i = 0; i < tables.qttyText.length; i++) {
+		tables.qttyValue[i] = { value: parseInt(tables.qttyText[i].replace(/^\D+/g, '')), outgoing: tables.qttyText[i].startsWith('-') };
 	}
 
 	acpTableCount = $(pathSelectors.count).text().toLowerCase() + ".";
@@ -332,7 +332,7 @@ function initMoneyFields(tables, pathSelectors) {
 	var allDates = [];
 	for (var i = 0; i < tables.qtty.length; i++) {
 		var hrefSplit = tables.nameField[i].href.split('/');
-		var playerID = tables.nameField[i].text + " (" + hrefSplit[hrefSplit.length - 1 ] + ")";
+		var playerID = tables.nameField[i].text + " (" + hrefSplit[hrefSplit.length - 1] + ")";
 		var date = tables.dateText[i].split(' ')[0];
 		if (!allDates.includes(date)) {
 			allDates.push(date);
@@ -353,7 +353,7 @@ function initMoneyFields(tables, pathSelectors) {
 	$(pathSelectors.header)[0].innerHTML = "Quantity <button type='button' id='sumMoneyButton'>Sum</button>";
 	var sumMoneyButton = document.getElementById('sumMoneyButton');
 	if (sumMoneyButton != null) {
-		sumMoneyButton.addEventListener("click", function(){
+		sumMoneyButton.addEventListener("click", function () {
 			openDailyTotalTable(allDates, playerMap);
 		}, false);
 	}
@@ -363,7 +363,7 @@ function initMoneyFields(tables, pathSelectors) {
 
 function openDailyTotalTable(allDates, playerMap) {
 	var tbl = document.createElement('table'),
-	header = tbl.createTHead();
+		header = tbl.createTHead();
 	playerKeys = Array.from(playerMap.keys());
 	tbl.width = "90%";
 	tbl.align = "center";
@@ -408,7 +408,7 @@ function openDailyTotalTable(allDates, playerMap) {
 			if (incoming > moneyMaxValue || outgoing > moneyMaxValue) {
 				fontcolor = "rgb(255, 0, 0)";
 			}
-			td.innerHTML = "<a style='color: " + fontcolor + ";'>Incoming: $" + incoming +"<br> Outgoing: $" + outgoing + "</a>";
+			td.innerHTML = "<a style='color: " + fontcolor + ";'>Incoming: $" + incoming + "<br> Outgoing: $" + outgoing + "</a>";
 		}
 	}
 	var newWindow = window.open();
@@ -492,40 +492,40 @@ function initRSPage() {
 
 	(function () {
 		if (sc_legitbutton != null) {
-			sc_legitbutton.addEventListener("click", function(){
+			sc_legitbutton.addEventListener("click", function () {
 				submitSCResult(getSCNameFromURL(), true);
 			}, false);
 		}
 		if (sc_unlegitbutton != null) {
-			sc_unlegitbutton.addEventListener("click", function(){
+			sc_unlegitbutton.addEventListener("click", function () {
 				submitSCResult(getSCNameFromURL(), false);
 			}, false);
 		}
 		if (sc_clearbutton != null) {
-			sc_clearbutton.addEventListener("click", function(){
+			sc_clearbutton.addEventListener("click", function () {
 				ClearSCResult(getSCNameFromURL());
 			}, false);
 		}
 		if (sc_colorMatches != null) {
-			sc_colorMatches.addEventListener("click", function(){
+			sc_colorMatches.addEventListener("click", function () {
 				updateCheckboxState(colorMatch, sc_colorMatches.checked);
 				waitForRSPlayerCards();
 			}, false);
 		}
 		if (sc_showSCID != null) {
-			sc_showSCID.addEventListener("click", function(){
+			sc_showSCID.addEventListener("click", function () {
 				updateCheckboxState(showSCID, sc_showSCID.checked, showAllSCID, !sc_showSCID.checked);
 				waitForRSPlayerCards();
 			}, false);
 		}
 		if (sc_showAllSCID != null) {
-			sc_showAllSCID.addEventListener("click", function(){
+			sc_showAllSCID.addEventListener("click", function () {
 				updateCheckboxState(showAllSCID, sc_showAllSCID.checked, showSCID, sc_showAllSCID.checked);
 				waitForRSPlayerCards();
 			}, false);
 		}
 		if (sc_autoProcess != null) {
-			sc_autoProcess.addEventListener("click", function(){
+			sc_autoProcess.addEventListener("click", function () {
 				updateCheckboxState(autoProcess, sc_autoProcess.checked);
 				if (!autoProcess.value) {
 					document.getElementById(autoProcess.spoiler).style.display = '';
@@ -541,8 +541,8 @@ function getCookie(e) {
 	for (var t = e + "=", r = decodeURIComponent(document.cookie).split(";"), o = 0; o < r.length; o++) {
 		for (var n = r[o];
 			" " == n.charAt(0);) n = n.substring(1);
-			if (0 == n.indexOf(t)) return n.substring(t.length, n.length)
-		}
+		if (0 == n.indexOf(t)) return n.substring(t.length, n.length)
+	}
 	return ""
 }
 
@@ -550,7 +550,7 @@ function waitForRSPlayerCards() {
 	var playerCards = document.getElementsByClassName('UI__PlayerCard__text');
 	var playerCardsSize = 0;
 
-	var checkExist = setInterval(function() {
+	var checkExist = setInterval(function () {
 		playerCards = document.getElementsByClassName('UI__PlayerCard__text');
 		var newCount = playerCards.length;
 		var name = getSCNameFromURL();
@@ -578,27 +578,27 @@ function waitForRSPlayerCards() {
 			processRSPlayerCards(playerCards);
 			clearInterval(checkExist);
 		}
-    }, 500); // check every 500ms
+	}, 500); // check every 500ms
 
 	// Observer to update Playercards on new search input. For the lack of a better check, observe the URL.
 	var oldName = getSCNameFromURL();
-	var checkUpdated = setInterval(function() {
+	var checkUpdated = setInterval(function () {
 		var newName = getSCNameFromURL();
 		if (oldName !== newName) {
 			oldName = newName;
 			waitForRSPlayerCards();
 			clearInterval(checkUpdated);
 		}
-    }, 500); // check every 500ms
+	}, 500); // check every 500ms
 }
 
 function processRSPlayerCards(playerCards) {
-	var searched_acc = { name : getSCNameFromURL(), exists: false};
+	var searched_acc = { name: getSCNameFromURL(), exists: false };
 	if (searched_acc.name == null) {
 		// something is wrong
 		return
 	}
-	for (var i=0; i < playerCards.length; i++) {
+	for (var i = 0; i < playerCards.length; i++) {
 
 		var outerdiv = document.createElement('div');
 		outerdiv.className = 'UI__PlayerCard__service';
@@ -620,7 +620,7 @@ function processRSPlayerCards(playerCards) {
 			if (searched_acc.name === username) {
 				searched_acc.exists = true;
 				var uNameCardText = uNameCard.getElementsByClassName('UI__MarkText__mark');
-				var colorstyle =  colorMatch.value ? "color:green" : "";
+				var colorstyle = colorMatch.value ? "color:green" : "";
 				if (uNameCardText != null) {
 					uNameCardText[0].style = colorstyle;
 				}
@@ -631,16 +631,16 @@ function processRSPlayerCards(playerCards) {
 				$.ajax({
 					method: 'GET',
 					url: 'https://scapi.rockstargames.com/profile/getprofile?nickname=' + username + '&maxFriends=3',
-					beforeSend: function(request) {
+					beforeSend: function (request) {
 						request.setRequestHeader('Authorization', 'Bearer ' + getCookie('BearerToken'));
 						request.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
 					}
 				})
-				.done(function(data) {
-					var scid = data.accounts[0].rockstarAccount.rockstarId;
-					var uname = data.accounts[0].rockstarAccount.name;
-					document.getElementById("rid_" + uname).innerHTML = "RID: " + scid;
-				});
+					.done(function (data) {
+						var scid = data.accounts[0].rockstarAccount.rockstarId;
+						var uname = data.accounts[0].rockstarAccount.name;
+						document.getElementById("rid_" + uname).innerHTML = "RID: " + scid;
+					});
 			} else {
 				playercardTextField.remove();
 			}
@@ -654,7 +654,7 @@ function processRSPlayerCards(playerCards) {
 	}
 }
 
-window.addEventListener('load', function() {
+window.addEventListener('load', function () {
 
 	if (location.hostname === hostnameACP) {
 		if (pathPlayerSearch.test(location.pathname)) {
