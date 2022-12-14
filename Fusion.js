@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		4.1.1
+// @version		4.1.2
 // @description	Improve all kinds of ACP and SocialClub features
 // @author		Myself5
 // @updateURL	https://g.m5.cx/Fusion.js
@@ -460,6 +460,7 @@ function openDailyTotalTable(moneyData) {
 	tbl.style.textAlign = "center";
 	tbl.style.border = '1px solid #ddd';
 	tbl.style.borderCollapse = "collapse";
+	tbl.style.fontFamily = "Roboto,sans-serif";
 
 	var headerRow = header.insertRow();
 
@@ -497,6 +498,9 @@ function openDailyTotalTable(moneyData) {
 		}
 	})
 	var newWindow = window.open();
+	newWindow.document.head.innerHTML =
+		'<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">\
+		<style> @import url("https://fonts.googleapis.com/css2?family=Roboto&display=swap"); </style>'
 	newWindow.document.body.appendChild(tbl);
 }
 
