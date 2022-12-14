@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		4.0.3
+// @version		4.1.0
 // @description	Improve all kinds of ACP and SocialClub features
 // @author		Myself5
 // @updateURL	https://g.m5.cx/Fusion.js
@@ -72,6 +72,8 @@ const moneyOptionsSpoiler = "Currently Empty";
 
 const optionSpoilerTypes = [scOptionsSpoiler, moneyOptionsSpoiler];
 
+var playerMapPagesSum = getPlayerMapPagesSum();
+
 // RS Variables
 const hostnameRS = 'socialclub.rockstargames.com';
 
@@ -79,6 +81,55 @@ var colorMatch = { id: 'colorMatch', value: GM_getValue("colorMatch_value", "tru
 var showSCID = { id: 'showSCID', value: GM_getValue("showSCID_value", "true") === "true" };
 var showAllSCID = { id: 'showAllSCID', value: GM_getValue("showAllSCID_value", "false") === "true" };
 
+// Helper Methods
+function JSONMapReplacer(key, value) {
+	if (value instanceof Map) {
+		return {
+			dataType: 'Map',
+			value: Array.from(value.entries()), // or with spread: value: [...value]
+		};
+	} else {
+		return value;
+	}
+}
+
+function JSONMapReviver(key, value) {
+	if (typeof value === 'object' && value !== null) {
+		if (value.dataType === 'Map') {
+			return new Map(value.value);
+		}
+	}
+	return value;
+}
+
+function getPlayerMapPagesSum() {
+	var str = GM_getValue('playerMapPagesSum', '{"dataType":"Map","value":[]}');
+	var map;
+	try {
+		map = JSON.parse(str, JSONMapReviver);
+	} catch (e) {
+		map = new Map();
+	}
+	return map;
+}
+
+function setPlayerMapPagesSum(map) {
+	try {
+		var str = JSON.stringify(map, JSONMapReplacer);
+		GM_getValue('playerMapPagesSum', str);
+	} catch (e) {
+		// Invalid Map, reset values
+		map = new Map();
+	}
+	return map;
+}
+
+function resetPlayerMapPagesSum() {
+	GM_deleteValue('playerMapPagesSum');
+	return new Map();
+}
+
+// Code
 function waitForInit(pathSelectors) {
 	var checkExist = setInterval(function () {
 		var newCount = $(pathSelectors.count).text().toLowerCase();
@@ -328,43 +379,82 @@ function initMoneyFields(tables, pathSelectors) {
 	acpTableCount = $(pathSelectors.count).text().toLowerCase() + ".";
 	$(pathSelectors.count).append(".");
 
-	var playerMap = new Map();
-	var allDates = [];
-	for (var i = 0; i < tables.qtty.length; i++) {
-		var hrefSplit = tables.nameField[i].href.split('/');
-		var playerID = tables.nameField[i].text + " (" + hrefSplit[hrefSplit.length - 1] + ")";
-		var date = tables.dateText[i].split(' ')[0];
-		if (!allDates.includes(date)) {
-			allDates.push(date);
-		}
-		date = date + (tables.qttyValue[i].outgoing ? "_outgoing" : "");
-		var todayBal = tables.qttyValue[i].value;
-		var playerDateMap = new Map();
-		if (playerMap.has(playerID)) {
-			playerDateMap = playerMap.get(playerID);
-			if (playerDateMap.has(date)) {
-				todayBal += playerDateMap.get(date);
-			}
-		}
-		playerDateMap.set(date, todayBal);
-		playerMap.set(playerID, playerDateMap);
+	$(pathSelectors.header)[0].innerHTML = "Quantity  <button type='button' id='resetSumMoneyButton'>Reset</button> <button type='button' id='addToSumMoneyButton'>Add</button> <button type='button' id='sumMoneyButton'>Show</button>";
+	const resetSumTableButton = document.getElementById('resetSumMoneyButton');
+	const addToSumMoneyButton = document.getElementById('addToSumMoneyButton');
+	const sumMoneyButton = document.getElementById('sumMoneyButton');
+	if (resetSumTableButton != null) {
+		resetSumTableButton.addEventListener("click", function () {
+			playerMapPagesSum = resetPlayerMapPagesSum();
+			addToSumMoneyButton.style.visibility = 'visible';
+		}, false);
 	}
-
-	$(pathSelectors.header)[0].innerHTML = "Quantity <button type='button' id='sumMoneyButton'>Sum</button>";
-	var sumMoneyButton = document.getElementById('sumMoneyButton');
+	if (addToSumMoneyButton != null) {
+		addToSumMoneyButton.addEventListener("click", function () {
+			addToDailySumMap(tables);
+			addToSumMoneyButton.style.visibility = 'hidden';
+		}, false);
+	}
 	if (sumMoneyButton != null) {
 		sumMoneyButton.addEventListener("click", function () {
-			openDailyTotalTable(allDates, playerMap);
+			openDailyTotalTable(getTrimmedDatePlayerData(addToDailySumMap(tables)));
 		}, false);
 	}
 
 	redrawMoneyFields(tables);
 }
 
-function openDailyTotalTable(allDates, playerMap) {
+function getTrimmedDatePlayerData(untrimmedPlayerMap) {
+	var playerDateData = { allDates: [], playerMap: new Map() };
+	untrimmedPlayerMap.forEach((untrimmedPlayerDateMap, playerID) => {
+		untrimmedPlayerDateMap.forEach((qtty, date) => {
+			var dateTrimmed = date.split(' ')[0];
+			var qttyTrimmed = { ...qtty };
+			if (!playerDateData.allDates.includes(dateTrimmed)) {
+				playerDateData.allDates.push(dateTrimmed);
+			}
+			var playerDateMap = new Map();
+			if (playerDateData.playerMap.has(playerID)) {
+				playerDateMap = playerDateData.playerMap.get(playerID);
+				if (playerDateMap.has(dateTrimmed)) {
+					qttyTrimmed.incoming += playerDateMap.get(dateTrimmed).incoming;
+					qttyTrimmed.outgoing += playerDateMap.get(dateTrimmed).outgoing;
+				}
+			}
+			playerDateMap.set(dateTrimmed, qttyTrimmed);
+			playerDateData.playerMap.set(playerID, playerDateMap);
+		})
+	})
+	return playerDateData;
+}
+
+function addToDailySumMap(tables) {
+	for (var i = 0; i < tables.qtty.length; i++) {
+		var hrefSplit = tables.nameField[i].href.split('/');
+		var playerID = tables.nameField[i].text + " (" + hrefSplit[hrefSplit.length - 1] + ")";
+		var date = tables.dateText[i];
+		var qtty = tables.qttyValue[i].value;
+		const isOutgoing = tables.qttyValue[i].outgoing;
+		var todayBal = isOutgoing ? { incoming: 0, outgoing: qtty } : { incoming: qtty, outgoing: 0 };
+		var playerDateMap = new Map();
+		if (playerMapPagesSum.has(playerID)) {
+			playerDateMap = playerMapPagesSum.get(playerID);
+			if (playerDateMap.has(date)) {
+				// Assume that there's only one transfer per Second per Player
+				// Overwrite whatever value is there already (which should always be zero)
+				todayBal = playerDateMap.get(date);
+				isOutgoing ? todayBal.outgoing = qtty : todayBal.incoming = qtty;
+			}
+		}
+		playerDateMap.set(date, todayBal);
+		playerMapPagesSum.set(playerID, playerDateMap);
+	}
+	return setPlayerMapPagesSum(playerMapPagesSum);
+}
+
+function openDailyTotalTable(moneyData) {
 	var tbl = document.createElement('table'),
 		header = tbl.createTHead();
-	playerKeys = Array.from(playerMap.keys());
 	tbl.width = "90%";
 	tbl.align = "center";
 	tbl.style.textAlign = "center";
@@ -378,39 +468,34 @@ function openDailyTotalTable(allDates, playerMap) {
 	cell.style.border = '1px solid #ddd';
 	cell.style.padding = "10px";
 
-	for (let i = 0; i < allDates.length; i++) {
+	for (let i = 0; i < moneyData.allDates.length; i++) {
 		var cell = headerRow.insertCell();
-		cell.innerHTML = "<b>" + allDates[i] + "</b>";
+		cell.innerHTML = "<b>" + moneyData.allDates[i] + "</b>";
 		cell.style.border = '1px solid #ddd';
 		cell.style.padding = "10px";
 	}
 
-	for (let i = 0; i < playerKeys.length; i++) {
+	moneyData.playerMap.forEach((player, playerName) => {
 		const tr = tbl.insertRow();
 		var cell = tr.insertCell();
-		cell.innerHTML = "<b>" + playerKeys[i] + "</b>";
+		cell.innerHTML = "<b>" + playerName + "</b>";
 		cell.style.border = '1px solid #ddd';
 		cell.style.padding = "10px";
-		for (let j = 0; j < allDates.length; j++) {
+		for (let j = 0; j < moneyData.allDates.length; j++) {
 			const td = tr.insertCell();
 			td.style.border = '1px solid #ddd';
 			td.style.padding = "10px";
-			var player = playerMap.get(playerKeys[i]);
-			var incoming = 0;
-			var outgoing = 0;
-			if (player.has(allDates[j])) {
-				incoming = player.get(allDates[j]);
-			}
-			if (player.has(allDates[j] + "_outgoing")) {
-				outgoing = player.get(allDates[j] + "_outgoing");
+			totalTdy = { incoming: 0, outgoing: 0 };
+			if (player.has(moneyData.allDates[j])) {
+				totalTdy = player.get(moneyData.allDates[j]);
 			}
 			var fontcolor = "";
-			if (incoming > moneyMaxValue || outgoing > moneyMaxValue) {
+			if (totalTdy.incoming > moneyMaxValue || totalTdy.outgoing > moneyMaxValue) {
 				fontcolor = "rgb(255, 0, 0)";
 			}
-			td.innerHTML = "<a style='color: " + fontcolor + ";'>Incoming: $" + incoming + "<br> Outgoing: $" + outgoing + "</a>";
+			td.innerHTML = "<a style='color: " + fontcolor + ";'>Incoming: $" + totalTdy.incoming + "<br> Outgoing: $" + totalTdy.outgoing + "</a>";
 		}
-	}
+	})
 	var newWindow = window.open();
 	newWindow.document.body.appendChild(tbl);
 }
