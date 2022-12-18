@@ -1,5 +1,5 @@
 # GrandRP ACP - Rockstar Social Club Improvements (GRSI)
-<p align="center"><img src="../master/Pictures/header.png" alt="header"></p>
+<p align="center"><img src="Pictures/header.png" alt="header"></p>
 
 ## Features
 
@@ -31,15 +31,15 @@ To install it, create a new userscript inside Tampermokey, paste the contents of
 
 ### General
 * Find your Account in question  
-![First Search](../master/Pictures/general_first_search.png?raw=true)  
+![First Search](Pictures/general_first_search.png?raw=true)  
 * Search SocialClub either by clicking the SocialClub in the ACP or manually through Rockstars Website  
-![SocialClub Search](../master/Pictures/general_sc_search.png?raw=true)  
+![SocialClub Search](Pictures/general_sc_search.png?raw=true)  
 * Optionally: Color Highlight the exact match and/or show it's SCID.  
-![SocialClub Search with Color Highlighting and SCID](../master/Pictures/general_sc_search_color_scid.png?raw=true)  
+![SocialClub Search with Color Highlighting and SCID](Pictures/general_sc_search_color_scid.png?raw=true)  
 * Determine if the account exists, and save that value by pressing the "Yes" or "No" buttons. "Clear" will unset the previous values for the searched Account.  
-![SC Validation Buttons](../master/Pictures/sc_legit_buttons.png?raw=true)  
+![SC Validation Buttons](Pictures/sc_legit_buttons.png?raw=true)  
 * Return to the ACP page and either search again or press the "Update" button in the Social Club field to see the color highlighting  
-![Final Result](../master/Pictures/general_done_highlighted_search.png?raw=true)
+![Final Result](Pictures/general_done_highlighted_search.png?raw=true)
 
 ### Autoprocess
 
@@ -47,17 +47,17 @@ To install it, create a new userscript inside Tampermokey, paste the contents of
 
 #### Autoprocess through Search
 * Find your Account in question  
-![First Search](../master/Pictures/general_first_search.png?raw=true)  
+![First Search](Pictures/general_first_search.png?raw=true)  
 * Search SocialClub either by clicking the SocialClub in the ACP or manually through Rockstars Website  
-![SocialClub Search](../master/Pictures/auto_process_sc_search.png?raw=true)  
+![SocialClub Search](Pictures/auto_process_sc_search.png?raw=true)  
 * The script will now automatically save the search result, there's no further interaction needed with the Rockstar page.  
 * Return to the ACP page and either search again or press the "Update" button in the Social Club field to see the color highlighting  
-![Final Result](../master/Pictures/general_done_highlighted_search.png?raw=true)  
+![Final Result](Pictures/general_done_highlighted_search.png?raw=true)  
 
 #### Autoprocess in Background
 * Find your Account in question  
-![First Search](../master/Pictures/bg_process_first_search.png?raw=true)  
+![First Search](Pictures/bg_process_first_search.png?raw=true)  
 * A new window will open, loading the SocialClub website. The Window will close after the value is stored. No further interaction is needed.  
-![SocialClub Popup](../master/Pictures/bg_process_popup_window.png?raw=true)  
+![SocialClub Popup](Pictures/bg_process_popup_window.png?raw=true)  
 * Return to the ACP page and either search again or press the "Update" button in the Social Club field to see the color highlighting  
-![Final Result](../master/Pictures/general_done_highlighted_search.png?raw=true)
+![Final Result](Pictures/general_done_highlighted_search.png?raw=true)
