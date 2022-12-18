@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		4.1.5
+// @version		4.2.0
 // @description	Improve all kinds of ACP and SocialClub features
 // @author		Myself5
 // @updateURL	https://g.m5.cx/Fusion.js
@@ -19,6 +19,31 @@
 // Basevalues, don't touch
 // Common
 const closeAfterProcessLocationSearch = "?closeAfterProcess";
+
+const optionsDefaultValues = {
+	autoProcess: true,
+	closeAfterProcess: false,
+	backgroundProcessButton: true,
+	hideButtonOnProcessedNames: true,
+	colorMatch: true,
+	showSCID: true,
+	showAllSCID: false,
+};
+
+const gmStorageMaps = {
+	configOptions: {
+		id: 'configOptions',
+		map: getMapFromStorage('configOptions'),
+	},
+	socialClubVerification: {
+		id: 'socialClubVerification',
+		map: getMapFromStorage('socialClubVerification'),
+	},
+	playerMapPagesSum: {
+		id: 'playerMapPagesSum',
+		map: getMapFromStorage('playerMapPagesSum'),
+	},
+};
 
 // ACP Variables
 var acpTableCount = "";
@@ -49,10 +74,24 @@ const _playerSearchHeader = "#result-players-list div:nth-child(2) table tr th:n
 const _playerSearchTable = "#result-players-list div:nth-child(2) table tr td:nth-child(6)";
 const playerSearchSelectors = { count: _playerSearchCount, header: _playerSearchHeader, table: _playerSearchTable, type: _selectorTypes.socialclub };
 
-var autoProcess = { id: 'autoProcess', value: GM_getValue("autoProcess_value", "false") === "true", spoiler: 'autoProcessOptions' };
-var closeAfterProcess = { id: 'closeAfterProcess', value: GM_getValue("closeAfterProcess_value", "false") === "true" };
-var backgroundProcessButton = { id: 'backgroundProcessButton', value: GM_getValue("backgroundProcessButton_value", "false") === "true" };
-var hideButtonOnProcessedNames = { id: 'hideButtonOnProcessedNames', value: GM_getValue("hideButtonOnProcessedNames_value", "false") === "true", spoiler: 'hideButtonOnProcessedNamesSpoiler' };
+var autoProcess = {
+	id: 'autoProcess',
+	value: gmStorageMaps.configOptions.map.has('autoProcess') ? gmStorageMaps.configOptions.map.get('autoProcess') : optionsDefaultValues.autoProcess,
+	spoiler: 'autoProcessOptions'
+};
+var closeAfterProcess = {
+	id: 'closeAfterProcess',
+	value: gmStorageMaps.configOptions.map.has('closeAfterProcess') ? gmStorageMaps.configOptions.map.get('closeAfterProcess') : optionsDefaultValues.closeAfterProcess
+};
+var backgroundProcessButton = {
+	id: 'backgroundProcessButton',
+	value: gmStorageMaps.configOptions.map.has('backgroundProcessButton') ? gmStorageMaps.configOptions.map.get('backgroundProcessButton') : optionsDefaultValues.backgroundProcessButton
+};
+var hideButtonOnProcessedNames = {
+	id: 'hideButtonOnProcessedNames',
+	value: gmStorageMaps.configOptions.map.has('hideButtonOnProcessedNames') ? gmStorageMaps.configOptions.map.get('hideButtonOnProcessedNames') : optionsDefaultValues.hideButtonOnProcessedNames,
+	spoiler: 'hideButtonOnProcessedNamesSpoiler'
+};
 
 const scOptionsSpoiler = "<br>\
 <input type='checkbox' id=" + autoProcess.id + ">\
@@ -73,14 +112,21 @@ const moneyOptionsSpoiler = "Currently Empty";
 
 const optionSpoilerTypes = [scOptionsSpoiler, moneyOptionsSpoiler];
 
-var playerMapPagesSum = getPlayerMapPagesSum();
-
 // RS Variables
 const hostnameRS = 'socialclub.rockstargames.com';
 
-var colorMatch = { id: 'colorMatch', value: GM_getValue("colorMatch_value", "true") === "true" };
-var showSCID = { id: 'showSCID', value: GM_getValue("showSCID_value", "true") === "true" };
-var showAllSCID = { id: 'showAllSCID', value: GM_getValue("showAllSCID_value", "false") === "true" };
+var colorMatch = {
+	id: 'colorMatch',
+	value: gmStorageMaps.configOptions.map.has('colorMatch') ? gmStorageMaps.configOptions.map.get('colorMatch') : optionsDefaultValues.colorMatch,
+};
+var showSCID = {
+	id: 'showSCID',
+	value: gmStorageMaps.configOptions.map.has('showSCID') ? gmStorageMaps.configOptions.map.get('showSCID') : optionsDefaultValues.showSCID,
+};
+var showAllSCID = {
+	id: 'showAllSCID',
+	value: gmStorageMaps.configOptions.map.has('showAllSCID') ? gmStorageMaps.configOptions.map.get('showAllSCID') : optionsDefaultValues.showAllSCID,
+};
 
 // Helper Methods
 function JSONMapReplacer(key, value) {
@@ -103,8 +149,8 @@ function JSONMapReviver(key, value) {
 	return value;
 }
 
-function getPlayerMapPagesSum() {
-	var str = GM_getValue('playerMapPagesSum', '{"dataType":"Map","value":[]}');
+function getMapFromStorage(mapname) {
+	var str = GM_getValue(mapname, '{"dataType":"Map","value":[]}');
 	var map;
 	try {
 		map = JSON.parse(str, JSONMapReviver);
@@ -114,19 +160,19 @@ function getPlayerMapPagesSum() {
 	return map;
 }
 
-function setPlayerMapPagesSum(map) {
+function saveMapToStorage(map) {
 	try {
-		var str = JSON.stringify(map, JSONMapReplacer);
-		GM_setValue('playerMapPagesSum', str);
+		var str = JSON.stringify(map.map, JSONMapReplacer);
+		GM_setValue(map.id, str);
 	} catch (e) {
 		// Invalid Map, reset values
-		map = new Map();
+		map.map = new Map();
 	}
 	return map;
 }
 
-function resetPlayerMapPagesSum() {
-	GM_deleteValue('playerMapPagesSum');
+function deleteMapIDFromStorage(mapid) {
+	GM_deleteValue(mapid);
 	return new Map();
 }
 
@@ -302,15 +348,14 @@ function bgCheckSC(sc_name) {
 }
 
 function redrawSCButtons(sc_fields, sc_names) {
+	gmStorageMaps.socialClubVerification.map = getMapFromStorage('socialClubVerification');
 	var sc_buttons = [];
 	for (var i = 0; i < sc_fields.length; i++) {
 		if (sc_names[i].length != 0) {
 			var fontcolor = "rgb(85, 160, 200)";
-			var rsValue = GM_getValue("sc_" + sc_names[i], null);
-			var sc_checked = rsValue != null;
+			var sc_checked = gmStorageMaps.socialClubVerification.map.has(sc_names[i]);
 			if (sc_checked) {
-				var sc_legit = rsValue === "true";
-				if (sc_legit) {
+				if (gmStorageMaps.socialClubVerification.map.get(sc_names[i]).valid) {
 					fontcolor = "rgb(0, 255, 0)";
 				} else {
 					fontcolor = "rgb(255, 0, 0)";
@@ -386,7 +431,7 @@ function initMoneyFields(tables, pathSelectors) {
 	const sumMoneyButton = document.getElementById('sumMoneyButton');
 	if (resetSumTableButton != null) {
 		resetSumTableButton.addEventListener("click", function () {
-			playerMapPagesSum = resetPlayerMapPagesSum();
+			gmStorageMaps.playerMapPagesSum.map = deleteMapIDFromStorage(gmStorageMaps.playerMapPagesSum.id);
 			addToSumMoneyButton.style.visibility = 'visible';
 		}, false);
 	}
@@ -438,8 +483,8 @@ function addToDailySumMap(tables) {
 		const isOutgoing = tables.qttyValue[i].outgoing;
 		var todayBal = isOutgoing ? { incoming: 0, outgoing: qtty } : { incoming: qtty, outgoing: 0 };
 		var playerDateMap = new Map();
-		if (playerMapPagesSum.has(playerID)) {
-			playerDateMap = playerMapPagesSum.get(playerID);
+		if (gmStorageMaps.playerMapPagesSum.map.has(playerID)) {
+			playerDateMap = gmStorageMaps.playerMapPagesSum.map.get(playerID);
 			if (playerDateMap.has(date)) {
 				// Assume that there's only one transfer per Second per Player
 				// Overwrite whatever value is there already (which should always be zero)
@@ -448,9 +493,9 @@ function addToDailySumMap(tables) {
 			}
 		}
 		playerDateMap.set(date, todayBal);
-		playerMapPagesSum.set(playerID, playerDateMap);
+		gmStorageMaps.playerMapPagesSum.map.set(playerID, playerDateMap);
 	}
-	return setPlayerMapPagesSum(playerMapPagesSum);
+	return saveMapToStorage(gmStorageMaps.playerMapPagesSum);
 }
 
 function openDailyTotalTable(moneyData) {
@@ -511,14 +556,19 @@ function openDailyTotalTable(moneyData) {
 
 function submitSCResult(name, result) {
 	if (name != null && name.length > 2) {
-		var res = result ? "true" : "false";
-		GM_setValue("sc_" + name, res)
+		if (gmStorageMaps.socialClubVerification.map.has(name)) {
+			gmStorageMaps.socialClubVerification.map.get(name).valid = result;
+		} else {
+			gmStorageMaps.socialClubVerification.map.set(name, { valid: result });
+		}
+		saveMapToStorage(gmStorageMaps.socialClubVerification);
 	}
 }
 
 function ClearSCResult(name) {
 	if (name.length != 0) {
-		GM_deleteValue("sc_" + name);
+		gmStorageMaps.socialClubVerification.map.delete(name);
+		saveMapToStorage(gmStorageMaps.socialClubVerification);
 	}
 }
 
@@ -528,16 +578,17 @@ function getSCNameFromURL() {
 
 function updateCheckboxState(cb, value, cbAdj, valueAdj, valueAdjValue) {
 	cb.value = value;
-	GM_setValue(cb.id + "_value", value ? "true" : "false");
+	gmStorageMaps.configOptions.map.set(cb.id, value);
 
 	if (cbAdj != null && valueAdj != null && valueAdj) {
 		if (valueAdjValue != null) {
 			value = valueAdjValue;
 		}
-		GM_setValue(cbAdj.id + "_value", value ? "true" : "false");
+		gmStorageMaps.configOptions.map.set(cbAdj.id, value);
 		cbAdj.value = value;
 		document.getElementById(cbAdj.id).checked = value;
 	}
+	saveMapToStorage(gmStorageMaps.configOptions);
 }
 
 function initRSPage() {
