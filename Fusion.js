@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		4.1.4
+// @version		4.1.5
 // @description	Improve all kinds of ACP and SocialClub features
 // @author		Myself5
 // @updateURL	https://g.m5.cx/Fusion.js
@@ -117,7 +117,7 @@ function getPlayerMapPagesSum() {
 function setPlayerMapPagesSum(map) {
 	try {
 		var str = JSON.stringify(map, JSONMapReplacer);
-		GM_getValue('playerMapPagesSum', str);
+		GM_setValue('playerMapPagesSum', str);
 	} catch (e) {
 		// Invalid Map, reset values
 		map = new Map();
