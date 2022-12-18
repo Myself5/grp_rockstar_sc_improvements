@@ -23,9 +23,10 @@
 
 ## Installation
 
-```Fusion.js``` is a [Tampermonkey](https://www.tampermonkey.net/) Skript, currently used and tested with version 4.18.1 on Chrome, although it should work with all other Tampermonkey-supported Browsers as well.
+```GRSI.user.js``` is a [Tampermonkey](https://www.tampermonkey.net/) Skript, currently used and tested with version 4.18.1 on Chrome, although it should work with all other Tampermonkey-supported Browsers as well.
 
-To install it, create a new userscript inside Tampermokey, paste the contents of ```Fusion.js```, and enable the script.
+To install it, create a new userscript inside Tampermokey, paste the contents of ```GRSI.user.js```, and enable the script.
+Alternatively, the script is hosted on [my Website](https://g.m5.cx/GRSI.user.js). Opening the Link will trigger an installation prompt inside Tampermonkey.
 
 ## Usage
 

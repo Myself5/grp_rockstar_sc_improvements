@@ -4,8 +4,8 @@
 // @version		4.2.0
 // @description	Improve all kinds of ACP and SocialClub features
 // @author		Myself5
-// @updateURL	https://g.m5.cx/Fusion.js
-// @downloadURL	https://g.m5.cx/Fusion.js
+// @updateURL	https://g.m5.cx/GRSI.user.js
+// @downloadURL	https://g.m5.cx/GRSI.user.js
 // @match		https://gta5grand.com/admin_*/account/search
 // @match		https://socialclub.rockstargames.com/members*
 // @match		https://gta5grand.com/admin_*/logs/authorization*
