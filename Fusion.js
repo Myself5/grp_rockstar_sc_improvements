@@ -6,10 +6,8 @@
 // @author		Myself5
 // @updateURL	https://g.m5.cx/GRSI.user.js
 // @downloadURL	https://g.m5.cx/GRSI.user.js
-// @match		https://gta5grand.com/admin_*/account/search
+// @match		https://gta5grand.com/admin_*
 // @match		https://socialclub.rockstargames.com/members*
-// @match		https://gta5grand.com/admin_*/logs/authorization*
-// @match		https://gta5grand.com/admin_*/logs/money*
 // @grant		GM_getValue
 // @grant		GM_setValue
 // @grant		GM_deleteValue
