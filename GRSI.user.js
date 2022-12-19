@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		4.2.1
+// @version		4.3.0
 // @description	Improve all kinds of ACP and SocialClub features
 // @author		Myself5
 // @updateURL	https://g.m5.cx/GRSI.user.js
@@ -110,6 +110,59 @@ const moneyOptionsSpoiler = "Currently Empty";
 
 const optionSpoilerTypes = [scOptionsSpoiler, moneyOptionsSpoiler];
 
+const zeroWidthWhitespace = '​'; // U+200b, used to split the cheater tag from the SC name when mouse-select-copying
+const cheaterTag = '⌊CHEATER⌋' + zeroWidthWhitespace;
+
+const scContextMenu = {
+	check: {
+		id: "scContextMenuCheck",
+		desc: "Check",
+	},
+	markCheater: {
+		id: "scContextMenuMarkCheater",
+		desc: "Mark Cheater",
+	},
+	unMarkCheater: {
+		id: "scContextMenuUnMarkCheater",
+		desc: "Unmark Cheater",
+	},
+	copySC: {
+		id: "scContextMenuCopySC",
+		desc: "Copy SocialClub",
+	},
+	resetSC: {
+		id: "scContextMenuResetSC",
+		desc: "Reset SocialClub Validation",
+	}
+};
+
+var scContextCSSArray =
+	[
+		"#context-menu { \
+	position: fixed;\
+	z-index: 10000;\
+	width: 150px;\
+	background: #1b1a1a;\
+	border-radius: 5px;\
+	transform: scale(0);\
+	transform-origin: top left;\
+  }",
+		"#context-menu.visible {\
+	transform: scale(1);\
+	transition: transform 200ms ease-in-out;\
+  }",
+		"#context-menu .item {\
+	padding: 8px 10px;\
+	font-size: 15px;\
+	color: #eee;\
+	cursor: pointer;\
+	border-radius: inherit;\
+}",
+		"#context-menu .item:hover {\
+	background: #343434;\
+}"
+	];
+
 // RS Variables
 const hostnameRS = 'socialclub.rockstargames.com';
 
@@ -172,6 +225,18 @@ function saveMapToStorage(map) {
 function deleteMapIDFromStorage(mapid) {
 	GM_deleteValue(mapid);
 	return new Map();
+}
+
+function addCSSStyle(css) {
+	const style = document.getElementById("cssAddedByGRSI") || (function () {
+		const style = document.createElement('style');
+		style.type = 'text/css';
+		style.id = "cssAddedByGRSI";
+		document.head.appendChild(style);
+		return style;
+	})();
+	const sheet = style.sheet;
+	sheet.insertRule(css, (sheet.rules || sheet.cssRules || []).length);
 }
 
 // Code
@@ -248,6 +313,44 @@ function initSearchButton(pathSelectors, button_listener) {
 
 	if (pathSelectors.type == _selectorTypes.socialclub) {
 		initSCOptionsBoxes();
+
+		// Add a copy-listener to remove the cheater-tag from SC Names on copy
+		document.addEventListener('copy', (event) => {
+			// There's a zero width Whitespace between the cheater-tag and the name. Use that to split and remove the tag
+			// that way we can determine there's a tag in front even if not the whole tag has been copied
+			var copiedText = document.getSelection().toString();
+			if (copiedText !== '') {
+				var splitText = copiedText.split(zeroWidthWhitespace);
+				splitText = splitText[splitText.length - 1];
+				event.clipboardData.setData('text/plain', splitText);
+				event.preventDefault();
+			}
+		});
+
+		for (let i = 0; i < scContextCSSArray.length; i++) {
+			addCSSStyle(scContextCSSArray[i]);
+		}
+		const contextMenu = document.getElementById("context-menu") || (function () {
+			const contextMenu = document.createElement('div');
+			contextMenu.id = "context-menu";
+			for (const [key, entry] of Object.entries(scContextMenu)) {
+				const entryDiv = document.createElement('div');
+				entryDiv.className = 'item';
+				entryDiv.id = entry.id;
+				entryDiv.textContent = entry.desc;
+				contextMenu.appendChild(entryDiv);
+			}
+			document.body.appendChild(contextMenu);
+			return contextMenu;
+		})();
+
+		document.body.addEventListener("click", (e) => {
+			// ? close the menu if the user clicks outside of it
+			if (e.target.offsetParent != contextMenu) {
+				contextMenu.classList.remove("visible");
+			}
+		});
+
 	} else if (pathSelectors.type == _selectorTypes.money) {
 		initMoneyOptionsBoxes();
 	}
@@ -346,24 +449,27 @@ function bgCheckSC(sc_name) {
 }
 
 function redrawSCButtons(sc_fields, sc_names) {
-	gmStorageMaps.socialClubVerification.map = getMapFromStorage('socialClubVerification');
+	gmStorageMaps.socialClubVerification.map = getMapFromStorage(gmStorageMaps.socialClubVerification.id);
 	var sc_buttons = [];
 	for (var i = 0; i < sc_fields.length; i++) {
 		if (sc_names[i].length != 0) {
 			var fontcolor = "rgb(85, 160, 200)";
-			var sc_checked = gmStorageMaps.socialClubVerification.map.has(sc_names[i]);
-			if (sc_checked) {
-				if (gmStorageMaps.socialClubVerification.map.get(sc_names[i]).valid) {
-					fontcolor = "rgb(0, 255, 0)";
-				} else {
-					fontcolor = "rgb(255, 0, 0)";
+			var knownCheater = false;
+			var scValidityChecked = false;
+			if (gmStorageMaps.socialClubVerification.map.has(sc_names[i])) {
+				const scValid = gmStorageMaps.socialClubVerification.map.get(sc_names[i]).valid;
+				scValidityChecked = scValid != undefined;
+				if (scValidityChecked) {
+					fontcolor = scValid ? "rgb(0, 255, 0)" : "rgb(255, 0, 0)";
 				}
+				knownCheater = gmStorageMaps.socialClubVerification.map.get(sc_names[i]).cheater;
 			}
-
-			sc_fields[i].innerHTML = "<a style='color: " + fontcolor + ";' href='" + baseURL + sc_names[i] + "/" + ((autoProcess.value && closeAfterProcess.value) ? closeAfterProcessLocationSearch : "") + "' target='_blank'>"
+			sc_fields[i].innerHTML = "<a style='color: rgb(255,255,0);'>"
+				+ (knownCheater ? cheaterTag : "")
+				+ "</a><a style='color: " + fontcolor + ";' href='" + baseURL + sc_names[i] + "/" + ((autoProcess.value && closeAfterProcess.value) ? closeAfterProcessLocationSearch : "") + "' target='_blank'>"
 				+ sc_names[i]
-				+ "</a> "
-				+ ((sc_checked && hideButtonOnProcessedNames.value) ? "" : ((autoProcess.value && backgroundProcessButton.value) ? "<button type='button' id='bgcheckButton_" + i + "'>Check</button>" : ""));
+				+ "</a>"
+				+ ((scValidityChecked && hideButtonOnProcessedNames.value) ? "" : ((autoProcess.value && backgroundProcessButton.value) ? "<button type='button' id='bgcheckButton_" + i + "'>Check</button>" : ""));
 
 			if ((autoProcess.value && backgroundProcessButton.value)) {
 				sc_buttons[i] = document.getElementById('bgcheckButton_' + i);
@@ -376,8 +482,114 @@ function redrawSCButtons(sc_fields, sc_names) {
 					}
 				}());
 			}
+			registerContextMenu(sc_fields, sc_names, i);
 		}
 	}
+}
+
+// Loosely based on https://github.com/GeorgianStan/context-menu-poc/blob/master/index.html
+function registerContextMenu(sc_fields, sc_names, count) {
+	const scope = sc_fields[count];
+	const sc_name = sc_names[count];
+	const contextMenu = document.getElementById("context-menu");
+
+	const normalizePozition = (mouseX, mouseY) => {
+		// compute the mouse position relative to the document body (body)
+		let {
+			left: bodyOffsetX,
+			top: bodyOffsetY,
+		} = document.body.getBoundingClientRect();
+
+		bodyOffsetX = bodyOffsetX < 0 ? 0 : bodyOffsetX;
+		bodyOffsetY = bodyOffsetY < 0 ? 0 : bodyOffsetY;
+
+		const bodyX = mouseX - bodyOffsetX;
+		const bodyY = mouseY - bodyOffsetY;
+
+		// ? check if the element will go out of bounds
+		const outOfBoundsOnX =
+			bodyX + contextMenu.clientWidth > document.body.clientWidth;
+
+		const outOfBoundsOnY =
+			bodyY + contextMenu.clientHeight > document.body.clientHeight;
+
+		let normalizedX = mouseX;
+		let normalizedY = mouseY;
+
+		// ? normalize on X
+		if (outOfBoundsOnX) {
+			normalizedX =
+				bodyOffsetX + document.body.clientWidth - contextMenu.clientWidth;
+		}
+
+		// ? normalize on Y
+		if (outOfBoundsOnY) {
+			normalizedY =
+				bodyOffsetY + document.body.clientHeight - contextMenu.clientHeight;
+		}
+
+		return { normalizedX, normalizedY };
+	};
+
+	scope.addEventListener("contextmenu", (event) => {
+		event.preventDefault();
+
+		const { clientX: mouseX, clientY: mouseY } = event;
+
+		const { normalizedX, normalizedY } = normalizePozition(mouseX, mouseY);
+
+		contextMenu.classList.remove("visible");
+
+		contextMenu.style.top = `${normalizedY}px`;
+		contextMenu.style.left = `${normalizedX}px`;
+
+		setTimeout(() => {
+			contextMenu.classList.add("visible");
+
+			var checkSCDiv = document.getElementById(scContextMenu.check.id);
+			if (checkSCDiv != null) {
+				checkSCDiv.onclick = function () {
+					bgCheckSC(sc_name);
+					contextMenu.classList.remove("visible");
+				}
+			}
+
+			var markCheaterDiv = document.getElementById(scContextMenu.markCheater.id);
+			if (markCheaterDiv != null) {
+				markCheaterDiv.onclick = function () {
+					submitSCKnowCheaterResult(sc_name, true);
+					contextMenu.classList.remove("visible");
+					redrawSCButtons(sc_fields, sc_names);
+				}
+			}
+
+			var unMarkCheaterDiv = document.getElementById(scContextMenu.unMarkCheater.id);
+			if (unMarkCheaterDiv != null) {
+				unMarkCheaterDiv.onclick = function () {
+					submitSCKnowCheaterResult(sc_name, false);
+					contextMenu.classList.remove("visible");
+					redrawSCButtons(sc_fields, sc_names);
+				}
+			}
+
+			var copySCDiv = document.getElementById(scContextMenu.copySC.id);
+			if (copySCDiv != null) {
+				copySCDiv.onclick = function () {
+					navigator.clipboard.writeText(sc_name);
+					contextMenu.classList.remove("visible");
+				}
+			}
+
+			var resetSCValidationDiv = document.getElementById(scContextMenu.resetSC.id);
+			if (resetSCValidationDiv != null) {
+				resetSCValidationDiv.onclick = function () {
+					ClearSCResult(sc_name);
+					contextMenu.classList.remove("visible");
+					redrawSCButtons(sc_fields, sc_names);
+				}
+			}
+		});
+	});
 }
 
 function redrawMoneyFields(tables) {
@@ -554,6 +766,7 @@ function openDailyTotalTable(moneyData) {
 
 function submitSCResult(name, result) {
 	if (name != null && name.length > 2) {
+		gmStorageMaps.socialClubVerification.map = getMapFromStorage(gmStorageMaps.socialClubVerification.id);
 		if (gmStorageMaps.socialClubVerification.map.has(name)) {
 			gmStorageMaps.socialClubVerification.map.get(name).valid = result;
 		} else {
@@ -563,8 +776,21 @@ function submitSCResult(name, result) {
 	}
 }
 
+function submitSCKnowCheaterResult(name, result) {
+	if (name != null && name.length > 2) {
+		gmStorageMaps.socialClubVerification.map = getMapFromStorage(gmStorageMaps.socialClubVerification.id);
+		if (gmStorageMaps.socialClubVerification.map.has(name)) {
+			gmStorageMaps.socialClubVerification.map.get(name).cheater = result;
+		} else {
+			gmStorageMaps.socialClubVerification.map.set(name, { cheater: result });
+		}
+		saveMapToStorage(gmStorageMaps.socialClubVerification);
+	}
+}
+
 function ClearSCResult(name) {
 	if (name.length != 0) {
+		gmStorageMaps.socialClubVerification.map = getMapFromStorage(gmStorageMaps.socialClubVerification.id);
 		gmStorageMaps.socialClubVerification.map.delete(name);
 		saveMapToStorage(gmStorageMaps.socialClubVerification);
 	}
