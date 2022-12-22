@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		4.4.0
+// @version		4.5.0
 // @description	Improve all kinds of ACP and SocialClub features
 // @author		Myself5
 // @updateURL	https://g.m5.cx/GRSI.user.js
@@ -123,6 +123,10 @@ const scContextMenu = {
 	check: {
 		id: "scContextMenuCheck",
 		desc: "Check",
+	},
+	update: {
+		id: "scContextMenuUpdate",
+		desc: "Update",
 	},
 	markCheater: {
 		id: "scContextMenuMarkCheater",
@@ -554,6 +558,14 @@ function registerContextMenu(sc_fields, sc_names, count) {
 			if (checkSCDiv != null) {
 				checkSCDiv.onclick = function () {
 					bgCheckSC(sc_name);
+					contextMenu.classList.remove("visible");
+				}
+			}
+
+			var updateTblDiv = document.getElementById(scContextMenu.update.id);
+			if (updateTblDiv != null) {
+				updateTblDiv.onclick = function () {
+					redrawSCButtons(sc_fields, sc_names);
 					contextMenu.classList.remove("visible");
 				}
 			}
