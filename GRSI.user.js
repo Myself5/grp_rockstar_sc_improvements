@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		4.3.0
+// @version		4.4.0
 // @description	Improve all kinds of ACP and SocialClub features
 // @author		Myself5
 // @updateURL	https://g.m5.cx/GRSI.user.js
@@ -33,15 +33,19 @@ const gmStorageMaps = {
 		id: 'configOptions',
 		map: getMapFromStorage('configOptions'),
 	},
-	socialClubVerification: {
-		id: 'socialClubVerification',
-		map: getMapFromStorage('socialClubVerification'),
-	},
 	playerMapPagesSum: {
 		id: 'playerMapPagesSum',
 		map: getMapFromStorage('playerMapPagesSum'),
 	},
 };
+
+// Old Data format
+const retiredGMStorageMaps = {
+	socialClubVerification: {
+		id: 'socialClubVerification',
+		map: getMapFromStorage('socialClubVerification'),
+	}
+}
 
 // ACP Variables
 var acpTableCount = "";
@@ -112,6 +116,8 @@ const optionSpoilerTypes = [scOptionsSpoiler, moneyOptionsSpoiler];
 
 const zeroWidthWhitespace = '​'; // U+200b, used to split the cheater tag from the SC name when mouse-select-copying
 const cheaterTag = '⌊CHEATER⌋' + zeroWidthWhitespace;
+
+const scStorageIdentifier = "SCStoragePrefix_";
 
 const scContextMenu = {
 	check: {
@@ -449,21 +455,19 @@ function bgCheckSC(sc_name) {
 }
 
 function redrawSCButtons(sc_fields, sc_names) {
-	gmStorageMaps.socialClubVerification.map = getMapFromStorage(gmStorageMaps.socialClubVerification.id);
 	var sc_buttons = [];
 	for (var i = 0; i < sc_fields.length; i++) {
 		if (sc_names[i].length != 0) {
 			var fontcolor = "rgb(85, 160, 200)";
 			var knownCheater = false;
 			var scValidityChecked = false;
-			if (gmStorageMaps.socialClubVerification.map.has(sc_names[i])) {
-				const scValid = gmStorageMaps.socialClubVerification.map.get(sc_names[i]).valid;
-				scValidityChecked = scValid != undefined;
-				if (scValidityChecked) {
-					fontcolor = scValid ? "rgb(0, 255, 0)" : "rgb(255, 0, 0)";
-				}
-				knownCheater = gmStorageMaps.socialClubVerification.map.get(sc_names[i]).cheater;
+			var scObj = getSCObj(sc_names[i]);
+			const scValid = scObj.valid;
+			scValidityChecked = scValid != undefined;
+			if (scValidityChecked) {
+				fontcolor = scValid ? "rgb(0, 255, 0)" : "rgb(255, 0, 0)";
 			}
+			knownCheater = scObj.cheater;
 			sc_fields[i].innerHTML = "<a style='color: rgb(255,255,0);'>"
 				+ (knownCheater ? cheaterTag : "")
 				+ "</a><a style='color: " + fontcolor + ";' href='" + baseURL + sc_names[i] + "/" + ((autoProcess.value && closeAfterProcess.value) ? closeAfterProcessLocationSearch : "") + "' target='_blank'>"
@@ -557,7 +561,7 @@ function registerContextMenu(sc_fields, sc_names, count) {
 			var markCheaterDiv = document.getElementById(scContextMenu.markCheater.id);
 			if (markCheaterDiv != null) {
 				markCheaterDiv.onclick = function () {
-					submitSCKnowCheaterResult(sc_name, true);
+					submitSCResult(sc_name, null, true);
 					contextMenu.classList.remove("visible");
 					redrawSCButtons(sc_fields, sc_names);
 				}
@@ -566,7 +570,7 @@ function registerContextMenu(sc_fields, sc_names, count) {
 			var unMarkCheaterDiv = document.getElementById(scContextMenu.unMarkCheater.id);
 			if (unMarkCheaterDiv != null) {
 				unMarkCheaterDiv.onclick = function () {
-					submitSCKnowCheaterResult(sc_name, false);
+					submitSCResult(sc_name, null, false);
 					contextMenu.classList.remove("visible");
 					redrawSCButtons(sc_fields, sc_names);
 				}
@@ -764,35 +768,31 @@ function openDailyTotalTable(moneyData) {
 	}, false);
 }
 
-function submitSCResult(name, result) {
-	if (name != null && name.length > 2) {
-		gmStorageMaps.socialClubVerification.map = getMapFromStorage(gmStorageMaps.socialClubVerification.id);
-		if (gmStorageMaps.socialClubVerification.map.has(name)) {
-			gmStorageMaps.socialClubVerification.map.get(name).valid = result;
-		} else {
-			gmStorageMaps.socialClubVerification.map.set(name, { valid: result });
-		}
-		saveMapToStorage(gmStorageMaps.socialClubVerification);
+function getSCObj(name) {
+	var nameObj = JSON.parse(GM_getValue(scStorageIdentifier + name, "{}"));
+	if (!nameObj) {
+		// Something is wrong with the stored value, create a new and empty object
+		nameObj = {};
 	}
+	return nameObj;
 }
 
-function submitSCKnowCheaterResult(name, result) {
+function submitSCResult(name, valid, cheater) {
 	if (name != null && name.length > 2) {
-		gmStorageMaps.socialClubVerification.map = getMapFromStorage(gmStorageMaps.socialClubVerification.id);
-		if (gmStorageMaps.socialClubVerification.map.has(name)) {
-			gmStorageMaps.socialClubVerification.map.get(name).cheater = result;
-		} else {
-			gmStorageMaps.socialClubVerification.map.set(name, { cheater: result });
+		var nameObj = getSCObj(name);
+		if (valid != null) {
+			nameObj.valid = valid;
 		}
-		saveMapToStorage(gmStorageMaps.socialClubVerification);
+		if (cheater != null) {
+			nameObj.cheater = cheater;
+		}
+		GM_setValue(scStorageIdentifier + name, JSON.stringify(nameObj));
 	}
 }
 
 function ClearSCResult(name) {
 	if (name.length != 0) {
-		gmStorageMaps.socialClubVerification.map = getMapFromStorage(gmStorageMaps.socialClubVerification.id);
-		gmStorageMaps.socialClubVerification.map.delete(name);
-		saveMapToStorage(gmStorageMaps.socialClubVerification);
+		GM_deleteValue(scStorageIdentifier + name);
 	}
 }
 
@@ -1023,6 +1023,20 @@ function processRSPlayerCards(playerCards) {
 	}
 }
 
+// Data conversion, remove at some point
+function tryConvertSCMap() {
+	retiredGMStorageMaps.socialClubVerification.map = getMapFromStorage(retiredGMStorageMaps.socialClubVerification.id);
+	if (retiredGMStorageMaps.socialClubVerification.map.size > 0) {
+		window.alert("GRSI: Updating Datastructure. Please wait...\n(This message can be closed. A new message will show once done)");
+		retiredGMStorageMaps.socialClubVerification.map.forEach((value, name) => {
+			GM_setValue(scStorageIdentifier + name, JSON.stringify(value));
+			retiredGMStorageMaps.socialClubVerification.map.delete(name);
+		});
+		saveMapToStorage(retiredGMStorageMaps.socialClubVerification);
+		window.alert("Conversion to new Datastructure done.");
+	}
+}
+
 window.addEventListener('load', function () {
 
 	if (location.hostname === hostnameACP) {
@@ -1039,6 +1053,9 @@ window.addEventListener('load', function () {
 		const version = document.createElement('a');
 		version.innerHTML = "GRSI Version: " + GM_info.script.version;
 		li.appendChild(version);
+
+		// Convert Data
+		tryConvertSCMap();
 	}
 
 	if (location.hostname === hostnameRS) {
