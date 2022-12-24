@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		4.6.3
+// @version		4.6.4
 // @description	Improve all kinds of ACP and SocialClub features
 // @author		Myself5
 // @updateURL	https://g.m5.cx/GRSI.user.js
@@ -1107,8 +1107,37 @@ function injectVersion() {
 
 function injectScrollToTop() {
 	var header = document.getElementsByClassName('navbar-page-title');
-	header[0].href="javascript:void(0)";
+	header[0].href = "javascript:void(0)";
 	header[0].onclick = (function () { $('html, body').animate({ scrollTop: 0 }, 'fast'); });
+}
+
+function injectPageChooser() {
+	var pagination = $('#DataTables_Table_0_paginate > ul');
+	if (pagination.length > 0) {
+		var liTextbox = document.createElement("li");
+		var textbox = document.createElement("input");
+		textbox.type = 'number';
+		textbox.placeholder = "Page";
+		textbox.style = "width: 4em";
+		liTextbox.appendChild(textbox);
+		pagination[0].appendChild(liTextbox);
+		var liA = document.createElement("li");
+		var a = document.createElement("a");
+		a.className = 'pagination-link';
+		a.href = "javascript:void(0)";
+		a.innerHTML = "Go";
+		a.onclick = (function () {
+			console.log(textbox.value);
+			if (textbox.value.length > 0) {
+				var pagevalue = textbox.value;
+				var urlsearch = new URLSearchParams(location.search);
+				urlsearch.set("page", pagevalue);
+				location.search = urlsearch.toString();
+			}
+		});
+		liA.appendChild(a);
+		pagination[0].appendChild(liA);
+	}
 }
 
 // Data conversion, remove at some point
@@ -1142,6 +1171,9 @@ window.addEventListener('load', function () {
 		injectVersion();
 
 		injectScrollToTop();
+
+		// Add a textbox + Go button to paginated tools
+		injectPageChooser();
 
 		// Convert Data
 		tryConvertSCMap();
