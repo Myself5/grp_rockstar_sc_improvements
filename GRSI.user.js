@@ -1081,6 +1081,30 @@ function processRSPlayerCards(playerCards) {
 	}
 }
 
+function injectVersion() {
+	const li = $('#header-navbar-collapse > ul > li.dropdown.dropdown-profile > ul > li')[0];
+	const version = document.createElement('a');
+	version.innerHTML = "GRSI Version: " + GM_info.script.version;
+	version.id = "grsi_version";
+	version.onclick = async function () {
+		var toBeProcessed = 0;
+		var scToBeUpdatedEntries = await GM.listValues();
+		for (let i = 0; i < scToBeUpdatedEntries.length; i++) {
+			if (scToBeUpdatedEntries[i].startsWith(scStorageIdentifier)) {
+				var nameObj = JSON.parse(GM_getValue(scToBeUpdatedEntries[i], "{}"));
+				if (!nameObj.scid && nameObj.valid) {
+					bgCheckSC(scToBeUpdatedEntries[i].replace(scStorageIdentifier, ""));
+					await new Promise(resolve => setTimeout(resolve, 2500));
+					if (++toBeProcessed > 15) {
+						break;
+					}
+				}
+			}
+		}
+	}
+	li.appendChild(version);
+}
+
 // Data conversion, remove at some point
 function tryConvertSCMap() {
 	retiredGMStorageMaps.socialClubVerification.map = getMapFromStorage(retiredGMStorageMaps.socialClubVerification.id);
@@ -1107,27 +1131,9 @@ window.addEventListener('load', function () {
 		if (pathMoneyLogs.test(location.pathname)) {
 			initSearchButton(moneyLogSelectors, false);
 		}
-		const li = $('#header-navbar-collapse > ul > li.dropdown.dropdown-profile > ul > li')[0];
-		const version = document.createElement('a');
-		version.innerHTML = "GRSI Version: " + GM_info.script.version;
-		version.id = "grsi_version";
-		version.onclick = async function () {
-			var toBeProcessed = 0;
-			var scToBeUpdatedEntries = await GM.listValues();
-			for (let i = 0; i < scToBeUpdatedEntries.length; i++) {
-				if (scToBeUpdatedEntries[i].startsWith(scStorageIdentifier)) {
-					var nameObj = JSON.parse(GM_getValue(scToBeUpdatedEntries[i], "{}"));
-					if (!nameObj.scid && nameObj.valid) {
-						bgCheckSC(scToBeUpdatedEntries[i].replace(scStorageIdentifier, ""));
-						await new Promise(resolve => setTimeout(resolve, 2500));
-						if (++toBeProcessed > 15) {
-							break;
-						}
-					}
-				}
-			}
-		}
-		li.appendChild(version);
+
+		// Inject Version to account menu
+		injectVersion();
 
 		// Convert Data
 		tryConvertSCMap();
