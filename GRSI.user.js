@@ -1107,6 +1107,7 @@ function injectVersion() {
 
 function injectScrollToTop() {
 	var header = document.getElementsByClassName('navbar-page-title');
+	header[0].href="javascript:void(0)";
 	header[0].onclick = (function () { $('html, body').animate({ scrollTop: 0 }, 'fast'); });
 }
 
