@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		4.6.0
+// @version		4.6.1
 // @description	Improve all kinds of ACP and SocialClub features
 // @author		Myself5
 // @updateURL	https://g.m5.cx/GRSI.user.js
@@ -1105,14 +1105,16 @@ window.addEventListener('load', function () {
 		const version = document.createElement('a');
 		version.innerHTML = "GRSI Version: " + GM_info.script.version;
 		version.id = "grsi_version";
-		version.onclick = function () {
+		version.onclick = async function () {
 			var toBeProcessed = 0;
+			var scToBeUpdatedEntries = await GM.listValues();
 			for (let i = 0; i < scToBeUpdatedEntries.length; i++) {
 				if (scToBeUpdatedEntries[i].startsWith(scStorageIdentifier)) {
 					var nameObj = JSON.parse(GM_getValue(scToBeUpdatedEntries[i], "{}"));
 					if (!nameObj.scid && nameObj.valid) {
 						bgCheckSC(scToBeUpdatedEntries[i].replace(scStorageIdentifier, ""));
-						if(++toBeProcessed > 15) {
+						await new Promise(resolve => setTimeout(resolve, 2500));
+						if (++toBeProcessed > 15) {
 							break;
 						}
 					}
@@ -1129,9 +1131,4 @@ window.addEventListener('load', function () {
 		initRSPage();
 		waitForRSPlayerCards();
 	}
-
 }, false);
-
-if (location.hostname === hostnameACP) {
-	var scToBeUpdatedEntries = await GM.listValues();
-}
