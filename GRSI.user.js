@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		4.6.1
+// @version		4.6.2
 // @description	Improve all kinds of ACP and SocialClub features
 // @author		Myself5
 // @updateURL	https://g.m5.cx/GRSI.user.js
@@ -978,10 +978,16 @@ function waitForRSPlayerCards() {
 				if (messageIcon != null) {
 					if (messageIcon.dataset.uiName === 'alert_icon') {
 						// no SC Found
-						if (autoProcess.value) {
-							submitSCResult(name, scValueTypes.valid, false);
-							if (closeAfterProcess.activeTab) {
-								window.parent.close();
+						// Make sure we're logged in, otherwise show alert
+						if (document.getElementsByClassName('Login__wrap__1cEoQ Login__background__n44LT').length > 0) {
+							// Login prompt only shows when not logged in. Show alert
+							window.alert("Not signed in. Please sign in to Rockstar services to continue.");
+						} else {
+							if (autoProcess.value) {
+								submitSCResult(name, scValueTypes.valid, false);
+								if (closeAfterProcess.activeTab) {
+									window.parent.close();
+								}
 							}
 						}
 						clearInterval(checkExist);
