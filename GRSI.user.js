@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		4.5.0
+// @version		4.6.0
 // @description	Improve all kinds of ACP and SocialClub features
 // @author		Myself5
 // @updateURL	https://g.m5.cx/GRSI.user.js
@@ -47,6 +47,12 @@ const retiredGMStorageMaps = {
 	}
 }
 
+const scValueTypes = {
+	valid: 'valid',
+	cheater: 'cheater',
+	scid: 'scid',
+}
+
 // ACP Variables
 var acpTableCount = "";
 const baseURL = "https://socialclub.rockstargames.com/members/";
@@ -76,36 +82,48 @@ const _playerSearchHeader = "#result-players-list div:nth-child(2) table tr th:n
 const _playerSearchTable = "#result-players-list div:nth-child(2) table tr td:nth-child(6)";
 const playerSearchSelectors = { count: _playerSearchCount, header: _playerSearchHeader, table: _playerSearchTable, type: _selectorTypes.socialclub };
 
+var showSCID = {
+	id: 'showSCID',
+	value: gmStorageMaps.configOptions.map.has('showSCID') ? gmStorageMaps.configOptions.map.get('showSCID') : optionsDefaultValues.showSCID,
+	desc: "Show SocialClub ID"
+};
 var autoProcess = {
 	id: 'autoProcess',
 	value: gmStorageMaps.configOptions.map.has('autoProcess') ? gmStorageMaps.configOptions.map.get('autoProcess') : optionsDefaultValues.autoProcess,
-	spoiler: 'autoProcessOptions'
+	spoiler: 'autoProcessOptions',
+	desc: 'Automatically process SC'
 };
 var closeAfterProcess = {
 	id: 'closeAfterProcess',
-	value: gmStorageMaps.configOptions.map.has('closeAfterProcess') ? gmStorageMaps.configOptions.map.get('closeAfterProcess') : optionsDefaultValues.closeAfterProcess
+	value: gmStorageMaps.configOptions.map.has('closeAfterProcess') ? gmStorageMaps.configOptions.map.get('closeAfterProcess') : optionsDefaultValues.closeAfterProcess,
+	desc: 'Automatically close after processing SC',
+	activeTab: false,
 };
 var backgroundProcessButton = {
 	id: 'backgroundProcessButton',
-	value: gmStorageMaps.configOptions.map.has('backgroundProcessButton') ? gmStorageMaps.configOptions.map.get('backgroundProcessButton') : optionsDefaultValues.backgroundProcessButton
+	value: gmStorageMaps.configOptions.map.has('backgroundProcessButton') ? gmStorageMaps.configOptions.map.get('backgroundProcessButton') : optionsDefaultValues.backgroundProcessButton,
+	desc: 'Show Button to process SC in Background'
 };
 var hideButtonOnProcessedNames = {
 	id: 'hideButtonOnProcessedNames',
 	value: gmStorageMaps.configOptions.map.has('hideButtonOnProcessedNames') ? gmStorageMaps.configOptions.map.get('hideButtonOnProcessedNames') : optionsDefaultValues.hideButtonOnProcessedNames,
-	spoiler: 'hideButtonOnProcessedNamesSpoiler'
+	spoiler: 'hideButtonOnProcessedNamesSpoiler',
+	desc: 'Hide Button on previously processed SCs'
 };
 
 const scOptionsSpoiler = "<br>\
+<input type='checkbox' id=" + showSCID.id + ">\
+<label for=" + showSCID.id + "> " + showSCID.desc + "</label><br>\
 <input type='checkbox' id=" + autoProcess.id + ">\
-<label for=" + autoProcess.id + "> Automatically process SC</label><br>\
+<label for=" + autoProcess.id + "> " + autoProcess.desc + "</label><br>\
 <div id='" + autoProcess.spoiler + "' style='display:none;'>\
 <input type='checkbox' id=" + closeAfterProcess.id + ">\
-<label for=" + closeAfterProcess.id + "> Automatically close after processing SC</label><br>\
+<label for=" + closeAfterProcess.id + "> " + closeAfterProcess.desc + "</label><br>\
 <input type='checkbox' id=" + backgroundProcessButton.id + ">\
-<label for=" + backgroundProcessButton.id + "> Show Button to process SC in Background</label><br>\
+<label for=" + backgroundProcessButton.id + "> " + backgroundProcessButton.desc + "</label><br>\
 <div id='" + hideButtonOnProcessedNames.spoiler + "' style='display:none;'>\
 <input type='checkbox' id=" + hideButtonOnProcessedNames.id + ">\
-<label for=" + hideButtonOnProcessedNames.id + "> Hide Button on previously processed SCs</label><br>\
+<label for=" + hideButtonOnProcessedNames.id + "> " + hideButtonOnProcessedNames.desc + "</label><br>\
 </div>\
 </div>\
 ";
@@ -139,6 +157,10 @@ const scContextMenu = {
 	copySC: {
 		id: "scContextMenuCopySC",
 		desc: "Copy SocialClub",
+	},
+	copySCID: {
+		id: "scContextMenuCopySCID",
+		desc: "Copy SocialClub ID",
 	},
 	resetSC: {
 		id: "scContextMenuResetSC",
@@ -179,10 +201,6 @@ const hostnameRS = 'socialclub.rockstargames.com';
 var colorMatch = {
 	id: 'colorMatch',
 	value: gmStorageMaps.configOptions.map.has('colorMatch') ? gmStorageMaps.configOptions.map.get('colorMatch') : optionsDefaultValues.colorMatch,
-};
-var showSCID = {
-	id: 'showSCID',
-	value: gmStorageMaps.configOptions.map.has('showSCID') ? gmStorageMaps.configOptions.map.get('showSCID') : optionsDefaultValues.showSCID,
 };
 var showAllSCID = {
 	id: 'showAllSCID',
@@ -371,6 +389,9 @@ function initSearchButton(pathSelectors, button_listener) {
 }
 
 function initSCOptionsBoxes() {
+	var showSCIDCB = document.getElementById(showSCID.id);
+	showSCIDCB.checked = showSCID.value;
+
 	var autoProcessCB = document.getElementById(autoProcess.id);
 	autoProcessCB.checked = autoProcess.value;
 
@@ -396,7 +417,7 @@ function initSCOptionsBoxes() {
 	}
 
 	(function () {
-		initACPOptions(autoProcessCB, closeAfterProcessCB, backgroundProcessButtonCB, hideButtonOnProcessedNamesCB);
+		initACPOptions(showSCIDCB, autoProcessCB, closeAfterProcessCB, backgroundProcessButtonCB, hideButtonOnProcessedNamesCB);
 	}());
 }
 
@@ -404,7 +425,15 @@ function initMoneyOptionsBoxes() {
 	// do nothing for now
 }
 
-function initACPOptions(autoProcessCB, closeAfterProcessCB, backgroundProcessButtonCB, hideButtonOnProcessedNamesCB, sc_fields, sc_names) {
+function initACPOptions(showSCIDCB, autoProcessCB, closeAfterProcessCB, backgroundProcessButtonCB, hideButtonOnProcessedNamesCB, sc_fields, sc_names) {
+	if (showSCIDCB != null) {
+		showSCIDCB.addEventListener("click", function () {
+			updateCheckboxState(showSCID, showSCIDCB.checked);
+			if (sc_fields != null && sc_names != null) {
+				redrawSCButtons(sc_fields, sc_names);
+			}
+		}, false);
+	}
 	if (autoProcessCB != null) {
 		autoProcessCB.addEventListener("click", function () {
 			updateCheckboxState(autoProcess, autoProcessCB.checked);
@@ -453,7 +482,6 @@ function initACPOptions(autoProcessCB, closeAfterProcessCB, backgroundProcessBut
 
 function bgCheckSC(sc_name) {
 	var url = baseURL + sc_name + "/" + closeAfterProcessLocationSearch;
-	var path = window.document.URL;
 	var win = window.open(url, sc_name, "width= 640, height= 480, left=0, top=0, toolbar=no, location=no, directories=no, status=no, menubar=no, scrollbars=yes, resizable=no, copyhistory=no").blur();
 	window.focus();
 }
@@ -463,19 +491,20 @@ function redrawSCButtons(sc_fields, sc_names) {
 	for (var i = 0; i < sc_fields.length; i++) {
 		if (sc_names[i].length != 0) {
 			var fontcolor = "rgb(85, 160, 200)";
-			var knownCheater = false;
-			var scValidityChecked = false;
 			var scObj = getSCObj(sc_names[i]);
+			var knownCheater = scObj.cheater;
+			var scID = scObj.scid;
 			const scValid = scObj.valid;
-			scValidityChecked = scValid != undefined;
+			var scValidityChecked = scValid != undefined;
 			if (scValidityChecked) {
 				fontcolor = scValid ? "rgb(0, 255, 0)" : "rgb(255, 0, 0)";
 			}
-			knownCheater = scObj.cheater;
 			sc_fields[i].innerHTML = "<a style='color: rgb(255,255,0);'>"
 				+ (knownCheater ? cheaterTag : "")
 				+ "</a><a style='color: " + fontcolor + ";' href='" + baseURL + sc_names[i] + "/" + ((autoProcess.value && closeAfterProcess.value) ? closeAfterProcessLocationSearch : "") + "' target='_blank'>"
 				+ sc_names[i]
+				+ "</a><a style='color: " + fontcolor + ";'>"
+				+ ((showSCID.value && scID) ? (" (" + scID + ")") : "")
 				+ "</a>"
 				+ ((scValidityChecked && hideButtonOnProcessedNames.value) ? "" : ((autoProcess.value && backgroundProcessButton.value) ? "<button type='button' id='bgcheckButton_" + i + "'>Check</button>" : ""));
 
@@ -573,7 +602,7 @@ function registerContextMenu(sc_fields, sc_names, count) {
 			var markCheaterDiv = document.getElementById(scContextMenu.markCheater.id);
 			if (markCheaterDiv != null) {
 				markCheaterDiv.onclick = function () {
-					submitSCResult(sc_name, null, true);
+					submitSCResult(sc_name, scValueTypes.cheater, true);
 					contextMenu.classList.remove("visible");
 					redrawSCButtons(sc_fields, sc_names);
 				}
@@ -582,7 +611,7 @@ function registerContextMenu(sc_fields, sc_names, count) {
 			var unMarkCheaterDiv = document.getElementById(scContextMenu.unMarkCheater.id);
 			if (unMarkCheaterDiv != null) {
 				unMarkCheaterDiv.onclick = function () {
-					submitSCResult(sc_name, null, false);
+					submitSCResult(sc_name, scValueTypes.cheater, false);
 					contextMenu.classList.remove("visible");
 					redrawSCButtons(sc_fields, sc_names);
 				}
@@ -592,6 +621,17 @@ function registerContextMenu(sc_fields, sc_names, count) {
 			if (copySCDiv != null) {
 				copySCDiv.onclick = function () {
 					navigator.clipboard.writeText(sc_name);
+					contextMenu.classList.remove("visible");
+				}
+			}
+
+			var copySCIDDiv = document.getElementById(scContextMenu.copySCID.id);
+			if (copySCIDDiv != null) {
+				copySCIDDiv.onclick = function () {
+					var scObj = getSCObj(sc_name);
+					if (scObj.scid) {
+						navigator.clipboard.writeText(scObj.scid);
+					}
 					contextMenu.classList.remove("visible");
 				}
 			}
@@ -627,12 +667,13 @@ function initSCButtons(sc_fields, sc_names, pathSelectors) {
 		}, false);
 	}
 
+	var showSCIDCB = document.getElementById(showSCID.id);
 	var autoProcessCB = document.getElementById(autoProcess.id);
 	var closeAfterProcessCB = document.getElementById(closeAfterProcess.id);
 	var backgroundProcessButtonCB = document.getElementById(backgroundProcessButton.id);
 	var hideButtonOnProcessedNamesCB = document.getElementById(hideButtonOnProcessedNames.id);
 
-	initACPOptions(autoProcessCB, closeAfterProcessCB, backgroundProcessButtonCB, hideButtonOnProcessedNamesCB, sc_fields, sc_names);
+	initACPOptions(showSCIDCB, autoProcessCB, closeAfterProcessCB, backgroundProcessButtonCB, hideButtonOnProcessedNamesCB, sc_fields, sc_names);
 
 	acpTableCount = $(pathSelectors.count).text().toLowerCase() + ".";
 	$(pathSelectors.count).append(".");
@@ -789,14 +830,19 @@ function getSCObj(name) {
 	return nameObj;
 }
 
-function submitSCResult(name, valid, cheater) {
+function submitSCResult(name, type, value) {
 	if (name != null && name.length > 2) {
 		var nameObj = getSCObj(name);
-		if (valid != null) {
-			nameObj.valid = valid;
-		}
-		if (cheater != null) {
-			nameObj.cheater = cheater;
+		switch (type) {
+			case scValueTypes.valid:
+				nameObj.valid = value;
+				break;
+			case scValueTypes.cheater:
+				nameObj.cheater = value;
+				break;
+			case scValueTypes.scid:
+				nameObj.scid = value;
+				break;
 		}
 		GM_setValue(scStorageIdentifier + name, JSON.stringify(nameObj));
 	}
@@ -828,7 +874,7 @@ function updateCheckboxState(cb, value, cbAdj, valueAdj, valueAdjValue) {
 }
 
 function initRSPage() {
-	closeAfterProcess.value = location.search === closeAfterProcessLocationSearch;
+	closeAfterProcess.activeTab = location.search === closeAfterProcessLocationSearch;
 	var txt = document.createElement("h4");
 	txt.innerHTML = "\
 	<div id='" + autoProcess.spoiler + "' style='display:none;'>\
@@ -839,8 +885,6 @@ function initRSPage() {
 	</div>\
 	<input type='checkbox' id=" + colorMatch.id + "> \
 	<label for=" + colorMatch.id + "> Color Name Match</label> \
-	<input type='checkbox' id=" + showSCID.id + "> \
-	<label for=" + showSCID.id + "> Show Match SCID</label> \
 	<input type='checkbox' id=" + showAllSCID.id + "> \
 	<label for=" + showAllSCID.id + "> Show SCID for All Accounts</label> \
 	<input type='checkbox' id=" + autoProcess.id + "> \
@@ -856,12 +900,10 @@ function initRSPage() {
 	var sc_unlegitbutton = document.getElementById('sc_notlegit');
 	var sc_clearbutton = document.getElementById('sc_clear');
 	var sc_colorMatches = document.getElementById(colorMatch.id);
-	var sc_showSCID = document.getElementById(showSCID.id);
 	var sc_showAllSCID = document.getElementById(showAllSCID.id);
 	var sc_autoProcess = document.getElementById(autoProcess.id);
 
 	sc_colorMatches.checked = colorMatch.value;
-	sc_showSCID.checked = showSCID.value;
 	sc_showAllSCID.checked = showAllSCID.value;
 	sc_autoProcess.checked = autoProcess.value;
 
@@ -874,12 +916,12 @@ function initRSPage() {
 	(function () {
 		if (sc_legitbutton != null) {
 			sc_legitbutton.addEventListener("click", function () {
-				submitSCResult(getSCNameFromURL(), true);
+				submitSCResult(getSCNameFromURL(), scValueTypes.valid, true);
 			}, false);
 		}
 		if (sc_unlegitbutton != null) {
 			sc_unlegitbutton.addEventListener("click", function () {
-				submitSCResult(getSCNameFromURL(), false);
+				submitSCResult(getSCNameFromURL(), scValueTypes.valid, false);
 			}, false);
 		}
 		if (sc_clearbutton != null) {
@@ -893,15 +935,9 @@ function initRSPage() {
 				waitForRSPlayerCards();
 			}, false);
 		}
-		if (sc_showSCID != null) {
-			sc_showSCID.addEventListener("click", function () {
-				updateCheckboxState(showSCID, sc_showSCID.checked, showAllSCID, !sc_showSCID.checked);
-				waitForRSPlayerCards();
-			}, false);
-		}
 		if (sc_showAllSCID != null) {
 			sc_showAllSCID.addEventListener("click", function () {
-				updateCheckboxState(showAllSCID, sc_showAllSCID.checked, showSCID, sc_showAllSCID.checked);
+				updateCheckboxState(showAllSCID, sc_showAllSCID.checked);
 				waitForRSPlayerCards();
 			}, false);
 		}
@@ -943,8 +979,8 @@ function waitForRSPlayerCards() {
 					if (messageIcon.dataset.uiName === 'alert_icon') {
 						// no SC Found
 						if (autoProcess.value) {
-							submitSCResult(name, false);
-							if (closeAfterProcess.value) {
+							submitSCResult(name, scValueTypes.valid, false);
+							if (closeAfterProcess.activeTab) {
 								window.parent.close();
 							}
 						}
@@ -1008,7 +1044,7 @@ function processRSPlayerCards(playerCards) {
 				playercardTextField.style = colorstyle;
 			}
 
-			if (showSCID.value && (searched_acc.name === username || showAllSCID.value)) {
+			if (searched_acc.name === username || showAllSCID.value) {
 				$.ajax({
 					method: 'GET',
 					url: 'https://scapi.rockstargames.com/profile/getprofile?nickname=' + username + '&maxFriends=3',
@@ -1020,6 +1056,13 @@ function processRSPlayerCards(playerCards) {
 					.done(function (data) {
 						var scid = data.accounts[0].rockstarAccount.rockstarId;
 						var uname = data.accounts[0].rockstarAccount.name;
+						if (searched_acc.name === uname) {
+							submitSCResult(uname, scValueTypes.scid, scid);
+							if (closeAfterProcess.activeTab) {
+								console.log("processRSPlayerCards");
+								window.parent.close();
+							}
+						}
 						document.getElementById("rid_" + uname).innerHTML = "RID: " + scid;
 					});
 			} else {
@@ -1028,10 +1071,7 @@ function processRSPlayerCards(playerCards) {
 		}
 	}
 	if (autoProcess.value) {
-		submitSCResult(searched_acc.name, searched_acc.exists);
-		if (closeAfterProcess.value) {
-			window.parent.close();
-		}
+		submitSCResult(searched_acc.name, scValueTypes.valid, searched_acc.exists);
 	}
 }
 
@@ -1064,6 +1104,21 @@ window.addEventListener('load', function () {
 		const li = $('#header-navbar-collapse > ul > li.dropdown.dropdown-profile > ul > li')[0];
 		const version = document.createElement('a');
 		version.innerHTML = "GRSI Version: " + GM_info.script.version;
+		version.id = "grsi_version";
+		version.onclick = function () {
+			var toBeProcessed = 0;
+			for (let i = 0; i < scToBeUpdatedEntries.length; i++) {
+				if (scToBeUpdatedEntries[i].startsWith(scStorageIdentifier)) {
+					var nameObj = JSON.parse(GM_getValue(scToBeUpdatedEntries[i], "{}"));
+					if (!nameObj.scid && nameObj.valid) {
+						bgCheckSC(scToBeUpdatedEntries[i].replace(scStorageIdentifier, ""));
+						if(++toBeProcessed > 15) {
+							break;
+						}
+					}
+				}
+			}
+		}
 		li.appendChild(version);
 
 		// Convert Data
@@ -1076,3 +1131,7 @@ window.addEventListener('load', function () {
 	}
 
 }, false);
+
+if (location.hostname === hostnameACP) {
+	var scToBeUpdatedEntries = await GM.listValues();
+}
