@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		4.6.2
+// @version		4.6.3
 // @description	Improve all kinds of ACP and SocialClub features
 // @author		Myself5
 // @updateURL	https://g.m5.cx/GRSI.user.js
@@ -1105,6 +1105,11 @@ function injectVersion() {
 	li.appendChild(version);
 }
 
+function injectScrollToTop() {
+	var header = document.getElementsByClassName('navbar-page-title');
+	header[0].onclick = (function () { $('html, body').animate({ scrollTop: 0 }, 'fast'); });
+}
+
 // Data conversion, remove at some point
 function tryConvertSCMap() {
 	retiredGMStorageMaps.socialClubVerification.map = getMapFromStorage(retiredGMStorageMaps.socialClubVerification.id);
@@ -1134,6 +1139,8 @@ window.addEventListener('load', function () {
 
 		// Inject Version to account menu
 		injectVersion();
+
+		injectScrollToTop();
 
 		// Convert Data
 		tryConvertSCMap();
