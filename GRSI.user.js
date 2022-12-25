@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		4.6.4
+// @version		4.6.5
 // @description	Improve all kinds of ACP and SocialClub features
 // @author		Myself5
 // @updateURL	https://g.m5.cx/GRSI.user.js
@@ -710,7 +710,7 @@ function initMoneyFields(tables, pathSelectors) {
 	}
 	if (sumMoneyButton != null) {
 		sumMoneyButton.addEventListener("click", function () {
-			openDailyTotalTable(getTrimmedDatePlayerData(addToDailySumMap(tables)));
+			openDailyTotalTable(getTrimmedDatePlayerData(addToDailySumMap(tables).map));
 		}, false);
 	}
 
