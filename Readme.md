@@ -4,13 +4,37 @@
 ## Features
 
 ### ACP
+#### SocialClub
 * SocialClubs link to the member search on the Rockstar SocialClub Website (Authorization Logs as well as Player Search)
 * Color-Highlight valid/invalid SC Accounts (Authorization Logs as well as Player Search)
+* Option: Show SocialClub ID behind SocialClub names
+* Context Menu on SocialClub field
+	* Trigger a background check
+	* Update all SocialClub entries
+	* Mark/Unmark SocialClub accounts as known cheater
+	* Copy SocialClub Name
+	* Copy SocialClub ID
+	* Reset All data on a specific SocialClub
+
+#### Money Logs
+* Highlight Money transfers over 5 Million
+* Add pages to a summary that will show the total amount incoming/outgoing by day in a different tab
+
+#### All Logs with Pages
+* Field to go to desired page
+* Search a page by date (done through binary search, page will reload multiple times during search until done)
+	* Time 0:00: Search for just the date
+	*  Time X:00: Search for date and hour
+	* Time X:XX: Search for date, hour and minute
+
+#### Common
+* Scroll to top by clicking the russian headlines
 
 ### SocialClub Website
 * Buttons to manually store if Account is valid or not
 * Option: Color Highlight exact matches
-* Option: Show SocialClub ID for match or all accounts from a search
+* Show SocialClub ID for match
+* Option: Show SocialClub ID for all accounts from a search
 
 ### Common
 * Local storage system using Tampermokeys ```GM_getValue``` and ```GM_setValue``` features
