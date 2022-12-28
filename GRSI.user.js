@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		4.6.5
+// @version		5.0.0
 // @description	Improve all kinds of ACP and SocialClub features
 // @author		Myself5
 // @updateURL	https://g.m5.cx/GRSI.user.js
@@ -51,6 +51,16 @@ const scValueTypes = {
 	valid: 'valid',
 	cheater: 'cheater',
 	scid: 'scid',
+}
+
+const binarySearchValues = {
+	initialRangeFound: 'binarySearch_initialRangeFound',
+	l: 'binarySearch_Left',
+	r: 'binarySearch_Right',
+	page: 'page',
+	active: 'binarySearch_Active',
+	search: 'binarySearch_Search',
+	initialSteps: 1000
 }
 
 // ACP Variables
@@ -1111,6 +1121,147 @@ function injectScrollToTop() {
 	header[0].onclick = (function () { $('html, body').animate({ scrollTop: 0 }, 'fast'); });
 }
 
+function openPaginationPage(urlsearch) {
+	location.search = urlsearch.toString();
+}
+
+function openPaginationPageInt(page) {
+	var urlsearch = new URLSearchParams(location.search);
+	urlsearch.set("page", page);
+	openPaginationPage(urlsearch);
+}
+
+function isSameDate(first, second) {
+	var sameDay = first.getFullYear() === second.getFullYear() &&
+		first.getMonth() === second.getMonth() &&
+		first.getDate() === second.getDate();
+
+	if (first.getHours() != 0 || first.getMinutes() != 0) {
+		sameDay = sameDay && first.getHours() === second.getHours();
+		if (first.getMinutes() != 0) {
+			sameDay = sameDay && first.getMinutes() === second.getMinutes();
+		}
+	}
+	return sameDay;
+}
+
+function processDatesFromPage(x) {
+	var dateNewerThanPage = false;
+	var dateOlderThanPage = false;
+
+	var dates;
+	var hdrs = $('body > div.app-layout-canvas > div > main > div > div:nth-child(2) > div > table > thead > tr')[0].children;
+	for (let i = 0; i < hdrs.length; i++) {
+		if (hdrs[i].textContent === "Date") {
+			dates = getTableValues($('body > div.app-layout-canvas > div > main > div > div:nth-child(2) > div > table > tbody > tr > td:nth-child(' + (i + 1) + ')'));
+			break;
+		}
+	}
+
+	for (let i = 0; i < dates.length; i++) {
+		var compareDate = new Date(dates[i]);
+		if (isSameDate(x, compareDate)) {
+			dateNewerThanPage = true;
+			dateOlderThanPage = true;
+			break;
+		}
+		if (x > compareDate) {
+			dateNewerThanPage = true;
+		}
+		if (x < compareDate) {
+			dateOlderThanPage = true;
+		}
+	}
+
+	if (dateNewerThanPage && dateOlderThanPage)
+		return 0;
+	if (dateOlderThanPage)
+		return -1;
+
+	// if the page is empty we can assume the date is newer
+	// This should therefore be the default return
+	return 1;
+}
+
+function findInitialRange(urlsearch) {
+	if (urlsearch == null) {
+		urlsearch = new URLSearchParams(location.search);
+	}
+	urlsearch.set(binarySearchValues.active, "true");
+	var initialRangeFound = urlsearch.get(binarySearchValues.initialRangeFound) === "true";
+	var l = parseInt(urlsearch.get(binarySearchValues.l));
+	var r = parseInt(urlsearch.get(binarySearchValues.r));
+	if (isNaN(l) || isNaN(r)) {
+		l = 0;
+		r = binarySearchValues.initialSteps;
+		urlsearch.set(binarySearchValues.l, l);
+		urlsearch.set(binarySearchValues.r, r);
+	}
+	var x = new Date(urlsearch.get(binarySearchValues.search));
+	if (initialRangeFound) {
+		binarySearch(urlsearch);
+		return;
+	}
+	var currentPage = parseInt(urlsearch.get(binarySearchValues.page));
+	if (isNaN(currentPage) || currentPage != r) {
+		urlsearch.set(binarySearchValues.page, r);
+	} else {
+		switch (processDatesFromPage(x)) {
+			case 0:
+				// Found the Page
+				urlsearch.delete(binarySearchValues.active);
+				break;
+			case 1:
+				urlsearch.set(binarySearchValues.initialRangeFound, "true");
+				let mid = l + Math.floor((r - l) / 2);
+				urlsearch.set(binarySearchValues.page, mid);
+				break;
+			case -1:
+				l += binarySearchValues.initialSteps;
+				r += binarySearchValues.initialSteps;
+				urlsearch.set(binarySearchValues.l, l);
+				urlsearch.set(binarySearchValues.r, r);
+				urlsearch.set(binarySearchValues.page, r);
+				break;
+		}
+	}
+	openPaginationPage(urlsearch);
+}
+
+function binarySearch(urlsearch) {
+	var l = parseInt(urlsearch.get(binarySearchValues.l));
+	var r = parseInt(urlsearch.get(binarySearchValues.r));
+	var x = new Date(urlsearch.get(binarySearchValues.search));
+	var currentPage = parseInt(urlsearch.get(binarySearchValues.page));
+
+	if (r >= l) {
+		switch (processDatesFromPage(x)) {
+			case 0:
+				urlsearch.delete(binarySearchValues.active);
+				openPaginationPage(urlsearch);
+				return;
+			case 1:
+				r = currentPage - 1;
+				urlsearch.set(binarySearchValues.r, r);
+				break;
+			case -1:
+				l = currentPage + 1;
+				urlsearch.set(binarySearchValues.l, l);
+				break;
+		}
+
+		let mid = l + Math.floor((r - l) / 2);
+		urlsearch.set(binarySearchValues.page, mid);
+		openPaginationPage(urlsearch);
+		return;
+	} else {
+		urlsearch.set(binarySearchValues.page, l);
+	}
+
+	urlsearch.delete(binarySearchValues.active);
+	openPaginationPage(urlsearch);
+}
+
 function injectPageChooser() {
 	var pagination = $('#DataTables_Table_0_paginate > ul');
 	if (pagination.length > 0) {
@@ -1118,21 +1269,43 @@ function injectPageChooser() {
 		var textbox = document.createElement("input");
 		textbox.type = 'number';
 		textbox.placeholder = "Page";
-		textbox.style = "width: 4em";
+		textbox.style.width = "4em";
+		textbox.addEventListener("keyup", (event) => {
+			if (event.key === "Enter") {
+				if (textbox.value.length > 0) {
+					openPaginationPageInt(textbox.value);
+				}
+			}
+		});
 		liTextbox.appendChild(textbox);
 		pagination[0].appendChild(liTextbox);
+		var liDate = document.createElement("li");
+		var datechooser = document.createElement("input");
+		var today = new Date();
+		datechooser.type = 'datetime-local';
+		datechooser.value = today.getFullYear() + "-" + (today.getMonth() + 1) + "-" + today.getDate() + "T00:00"
+		datechooser.style.padding = "4px"
+		datechooser.style.height = "30px"
+		liDate.appendChild(datechooser);
+		pagination[0].appendChild(liDate);
 		var liA = document.createElement("li");
 		var a = document.createElement("a");
 		a.className = 'pagination-link';
 		a.href = "javascript:void(0)";
 		a.innerHTML = "Go";
 		a.onclick = (function () {
-			console.log(textbox.value);
 			if (textbox.value.length > 0) {
-				var pagevalue = textbox.value;
-				var urlsearch = new URLSearchParams(location.search);
-				urlsearch.set("page", pagevalue);
-				location.search = urlsearch.toString();
+				openPaginationPageInt(textbox.value);
+			} else {
+				if (window.confirm("Do you really want to search for this date: " + datechooser.value + "?")) {
+					urlsearch = new URLSearchParams(location.search);
+					urlsearch.set(binarySearchValues.search, datechooser.value);
+					urlsearch.delete(binarySearchValues.l);
+					urlsearch.delete(binarySearchValues.r);
+					urlsearch.delete(binarySearchValues.active);
+					urlsearch.delete(binarySearchValues.initialRangeFound);
+					findInitialRange(urlsearch);
+				}
 			}
 		});
 		liA.appendChild(a);
@@ -1157,6 +1330,11 @@ function tryConvertSCMap() {
 window.addEventListener('load', function () {
 
 	if (location.hostname === hostnameACP) {
+		var searchparams = new URLSearchParams(location.search);
+		if (searchparams.get(binarySearchValues.active) == 'true') {
+			findInitialRange();
+			return;
+		}
 		if (pathPlayerSearch.test(location.pathname)) {
 			initSearchButton(playerSearchSelectors, true);
 		}
