@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		5.0.0
+// @version		5.0.1
 // @description	Improve all kinds of ACP and SocialClub features
 // @author		Myself5
 // @updateURL	https://g.m5.cx/GRSI.user.js
@@ -1297,7 +1297,8 @@ function injectPageChooser() {
 			if (textbox.value.length > 0) {
 				openPaginationPageInt(textbox.value);
 			} else {
-				if (window.confirm("Do you really want to search for this date: " + datechooser.value + "?")) {
+				if (window.confirm("Do you really want to search for this date: " + datechooser.value + "?"
+									+ "\n(The Tab will continue to reload until the search is done)")) {
 					urlsearch = new URLSearchParams(location.search);
 					urlsearch.set(binarySearchValues.search, datechooser.value);
 					urlsearch.delete(binarySearchValues.l);
