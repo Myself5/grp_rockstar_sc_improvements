@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		5.0.1
+// @version		6.0.0
 // @description	Improve all kinds of ACP and SocialClub features
 // @author		Myself5
 // @updateURL	https://g.m5.cx/GRSI.user.js
@@ -70,10 +70,11 @@ const hostnameACP = 'gta5grand.com';
 const acpTableDummy = 'https://gta5grand.com/acptable';
 const pathAuthLogs = new RegExp('/admin_.*\/logs\/authorization');
 const pathMoneyLogs = new RegExp('/admin_.*\/logs\/money');
+const pathFractionLogs = new RegExp('/admin_.*\/logs\/fraction');
 const pathPlayerSearch = new RegExp('/admin_.*\/account\/search');
 const moneyMaxValue = 5000000;
 
-const _selectorTypes = { socialclub: 0, money: 1 };
+const _selectorTypes = { socialclub: 0, money: 1, fraction: 2 };
 
 const _authLogCount = "body > div.app-layout-canvas > div > main > div > div.row > div";
 const _authLogHeader = "body > div.app-layout-canvas > div > main > div > div:nth-child(2) > div > table > thead > tr > th:nth-child(4)";
@@ -91,6 +92,27 @@ const _playerSearchCount = "#result_count";
 const _playerSearchHeader = "#result-players-list div:nth-child(2) table tr th:nth-child(6)";
 const _playerSearchTable = "#result-players-list div:nth-child(2) table tr td:nth-child(6)";
 const playerSearchSelectors = { count: _playerSearchCount, header: _playerSearchHeader, table: _playerSearchTable, type: _selectorTypes.socialclub };
+
+const fractionSearchValues = {
+	headerBlock: 'logsmoney_post',
+	inputID: 'fractionSearchID',
+	page: 'page',
+	inputPage: 'fractionSearchEndPage',
+	inputQTTY: 'fractionSearchQTTY',
+	active: 'fractionSearchActive',
+	tblSelectors: {
+		mainTable: 'body > div.app-layout-canvas > div > main > div > div:nth-child(2) > div.card-block > table',
+		nick: 0,
+		id: 1,
+		action: 2,
+		qtty: 3,
+		additionalInfo: 4,
+		rank: 5,
+		date: 6
+	},
+	tblDefault: '[[],[],[],[],[],[],[]]',
+	tblGMPrefix: 'ACPFractionFilterPrefix_'
+};
 
 var showSCID = {
 	id: 'showSCID',
@@ -396,6 +418,200 @@ function initSearchButton(pathSelectors, button_listener) {
 	if (!button_listener) {
 		waitForInit(pathSelectors);
 	}
+}
+
+function initFractionPage() {
+	var formBlock = document.getElementById(fractionSearchValues.headerBlock);
+
+	var selectFormGroup = document.createElement('div');
+	selectFormGroup.className = 'form-group';
+	var selectLabel = document.createElement('label');
+	selectLabel.className = 'sr-only';
+	selectLabel.htmlFor = 'params_bankmoney';
+	selectFormGroup.appendChild(selectLabel);
+	selectFormGroup.appendChild(document.getElementById('fraction-list'));
+	formBlock.appendChild(selectFormGroup);
+
+	var idFormGroup = document.createElement('div');
+	idFormGroup.className = 'form-group';
+	var idLabel = document.createElement('label');
+	idLabel.className = 'sr-only';
+	idLabel.htmlFor = fractionSearchValues.inputID;
+	idFormGroup.appendChild(idLabel);
+	var idInput = document.createElement('input');
+	idInput.className = 'form-control';
+	idInput.type = 'number';
+	idInput.name = fractionSearchValues.inputID;
+	idInput.id = fractionSearchValues.inputID;
+	idInput.placeholder = 'Player ID';
+	idInput.addEventListener("keyup", (event) => {
+		if (event.key === "Enter") {
+			handleFractionSearchEntry();
+		}
+	});
+	idFormGroup.appendChild(idInput);
+	formBlock.appendChild(idFormGroup);
+
+	var pageFormGroup = document.createElement('div');
+	pageFormGroup.className = 'form-group';
+	var pageLabel = document.createElement('label');
+	pageLabel.className = 'sr-only';
+	pageLabel.htmlFor = fractionSearchValues.inputID;
+	pageFormGroup.appendChild(pageLabel);
+	var pageInput = document.createElement('input');
+	pageInput.className = 'form-control';
+	pageInput.type = 'number';
+	pageInput.name = fractionSearchValues.inputPage;
+	pageInput.id = fractionSearchValues.inputPage;
+	pageInput.placeholder = 'End Page';
+	pageInput.addEventListener("keyup", (event) => {
+		if (event.key === "Enter") {
+			handleFractionSearchEntry();
+		}
+	});
+	pageFormGroup.appendChild(pageInput);
+	formBlock.appendChild(pageFormGroup);
+
+	var qttyFormGroup = document.createElement('div');
+	qttyFormGroup.className = 'form-group';
+	var qttyLabel = document.createElement('label');
+	qttyLabel.className = 'sr-only';
+	qttyLabel.htmlFor = fractionSearchValues.inputQTTY;
+	qttyFormGroup.appendChild(qttyLabel);
+	var QTTYInput = document.createElement('input');
+	QTTYInput.className = 'form-control';
+	QTTYInput.type = 'number';
+	QTTYInput.name = fractionSearchValues.inputQTTY;
+	QTTYInput.id = fractionSearchValues.inputQTTY;
+	QTTYInput.placeholder = 'Quantity (Optional)';
+	QTTYInput.addEventListener("keyup", (event) => {
+		if (event.key === "Enter") {
+			handleFractionSearchEntry();
+		}
+	});
+	qttyFormGroup.appendChild(QTTYInput);
+	formBlock.appendChild(qttyFormGroup);
+
+	var filterFormGroup = document.createElement('div');
+	filterFormGroup.className = 'form-group';
+	var filterButton = document.createElement('button');
+	filterButton.title = "Click to filter content by PlayerID and/or Quantity"
+	filterButton.innerHTML = "Filter";
+	filterButton.type = "button";
+	filterButton.className = "btn btn-default";
+	filterButton.onclick = function () {
+		handleFractionSearchEntry();
+	}
+	filterFormGroup.appendChild(filterButton);
+	formBlock.appendChild(filterFormGroup);
+}
+
+function addToTable(arr, tbl, item, index) {
+	arr[item].push(tbl.rows.item(index).cells.item(item).textContent);
+}
+
+function handleFractionSearchEntry(urlsearch) {
+	var playerID, endPage, qtty;
+	if (urlsearch == null) {
+		urlsearch = new URLSearchParams(location.search);
+		playerID = parseInt(document.getElementById(fractionSearchValues.inputID).value);
+		endPage = parseInt(document.getElementById(fractionSearchValues.inputPage).value);
+		qtty = parseInt(document.getElementById(fractionSearchValues.inputQTTY).value);
+		urlsearch = new URLSearchParams(location.search);
+		urlsearch.set(fractionSearchValues.inputID, playerID);
+		urlsearch.set(fractionSearchValues.inputPage, endPage);
+		urlsearch.set(fractionSearchValues.inputQTTY, qtty);
+		GM_deleteValue(fractionSearchValues.tblGMPrefix + "_" + playerID + "_" + qtty);
+	} else {
+		playerID = parseInt(urlsearch.get(fractionSearchValues.inputID));
+		endPage = parseInt(urlsearch.get(fractionSearchValues.inputPage));
+		qtty = parseInt(urlsearch.get(fractionSearchValues.inputQTTY));
+	}
+	if ((playerID.length == 0 && qtty.length == 0) || endPage.length == 0) {
+		window.alert("Please specify PlayerID as well as the last page to check (starting from current)");
+	} else {
+		urlsearch.set(fractionSearchValues.active, "true");
+		var page = parseInt(urlsearch.get(fractionSearchValues.page));
+		if (isNaN(page)) {
+			page = 1;
+		}
+		var filterTable = JSON.parse(GM_getValue(fractionSearchValues.tblGMPrefix + "_" + playerID + "_" + qtty, fractionSearchValues.tblDefault));
+		var table = $(fractionSearchValues.tblSelectors.mainTable)[0];
+		if (filterTable[0].length == 0 && table.rows.length > 0) {
+			// Add Headlines once
+			addToTable(filterTable, table, fractionSearchValues.tblSelectors.nick, 0);
+			addToTable(filterTable, table, fractionSearchValues.tblSelectors.id, 0);
+			addToTable(filterTable, table, fractionSearchValues.tblSelectors.action, 0);
+			addToTable(filterTable, table, fractionSearchValues.tblSelectors.qtty, 0);
+			addToTable(filterTable, table, fractionSearchValues.tblSelectors.additionalInfo, 0);
+			addToTable(filterTable, table, fractionSearchValues.tblSelectors.rank, 0);
+			addToTable(filterTable, table, fractionSearchValues.tblSelectors.date, 0);
+		}
+		for (let i = 1; i < table.rows.length; i++) {
+			var tblID = parseInt(table.rows.item(i).cells.item(fractionSearchValues.tblSelectors.id).textContent);
+			var tblQTTY = parseInt(table.rows.item(i).cells.item(fractionSearchValues.tblSelectors.qtty).textContent);
+			if (tblID == playerID || tblQTTY == qtty) {
+				addToTable(filterTable, table, fractionSearchValues.tblSelectors.nick, i);
+				addToTable(filterTable, table, fractionSearchValues.tblSelectors.id, i);
+				addToTable(filterTable, table, fractionSearchValues.tblSelectors.action, i);
+				addToTable(filterTable, table, fractionSearchValues.tblSelectors.qtty, i);
+				addToTable(filterTable, table, fractionSearchValues.tblSelectors.additionalInfo, i);
+				addToTable(filterTable, table, fractionSearchValues.tblSelectors.rank, i);
+				addToTable(filterTable, table, fractionSearchValues.tblSelectors.date, i);
+			}
+		}
+		GM_setValue(fractionSearchValues.tblGMPrefix + "_" + playerID + "_" + qtty, JSON.stringify(filterTable));
+		if (page < endPage) {
+			urlsearch.set(fractionSearchValues.page, page + 1);
+			openPaginationPage(urlsearch);
+		} else if (page > endPage) {
+			urlsearch.set(fractionSearchValues.page, page - 1);
+			openPaginationPage(urlsearch);
+		} else {
+			urlsearch.delete(binarySearchValues.active);
+			openFractionsFilterTable(filterTable);
+			openPaginationPage(urlsearch);
+		}
+	}
+}
+
+function openFractionsFilterTable(filterTable) {
+	var tbl = document.createElement('table'),
+		header = tbl.createTHead();
+	tbl.width = "90%";
+	tbl.align = "center";
+	tbl.style.textAlign = "center";
+	tbl.style.border = '1px solid #ddd';
+	tbl.style.borderCollapse = "collapse";
+	tbl.style.fontFamily = "Roboto,sans-serif";
+
+	var headerRow = header.insertRow();
+
+	for (let i = 0; i < filterTable.length; i++) {
+		cell = headerRow.insertCell();
+		cell.innerHTML = "<b>" + filterTable[i][0] + "</b>";
+		cell.style.border = '1px solid #ddd';
+		cell.style.padding = "10px";
+	}
+
+	for (let i = 1; i < filterTable[0].length; i++) {
+		const tr = tbl.insertRow();
+		for (let j = 0; j < filterTable.length; j++) {
+			var cell = tr.insertCell();
+			cell.innerHTML = filterTable[j][i];
+			cell.style.border = '1px solid #ddd';
+			cell.style.padding = "10px";
+		}
+	}
+	var newWindow = window.open(acpTableDummy);
+	newWindow.addEventListener('load', function () {
+		newWindow.document.head.innerHTML =
+			'<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">\
+			<style> @import url("https://fonts.googleapis.com/css2?family=Roboto&display=swap"); </style>'
+		var bdy = document.createElement('body');
+		bdy.appendChild(tbl);
+		newWindow.document.body = bdy;
+	}, false);
 }
 
 function initSCOptionsBoxes() {
@@ -1298,7 +1514,7 @@ function injectPageChooser() {
 				openPaginationPageInt(textbox.value);
 			} else {
 				if (window.confirm("Do you really want to search for this date: " + datechooser.value + "?"
-									+ "\n(The Tab will continue to reload until the search is done)")) {
+					+ "\n(The Tab will continue to reload until the search is done)")) {
 					urlsearch = new URLSearchParams(location.search);
 					urlsearch.set(binarySearchValues.search, datechooser.value);
 					urlsearch.delete(binarySearchValues.l);
@@ -1336,6 +1552,10 @@ window.addEventListener('load', function () {
 			findInitialRange();
 			return;
 		}
+		if (searchparams.get(fractionSearchValues.active) == 'true') {
+			handleFractionSearchEntry(searchparams);
+			return;
+		}
 		if (pathPlayerSearch.test(location.pathname)) {
 			initSearchButton(playerSearchSelectors, true);
 		}
@@ -1344,6 +1564,9 @@ window.addEventListener('load', function () {
 		}
 		if (pathMoneyLogs.test(location.pathname)) {
 			initSearchButton(moneyLogSelectors, false);
+		}
+		if (pathFractionLogs.test(location.pathname)) {
+			initFractionPage();
 		}
 
 		// Inject Version to account menu
