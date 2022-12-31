@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		6.0.0
+// @version		6.0.1
 // @description	Improve all kinds of ACP and SocialClub features
 // @author		Myself5
 // @updateURL	https://g.m5.cx/GRSI.user.js
@@ -527,7 +527,7 @@ function handleFractionSearchEntry(urlsearch) {
 		endPage = parseInt(urlsearch.get(fractionSearchValues.inputPage));
 		qtty = parseInt(urlsearch.get(fractionSearchValues.inputQTTY));
 	}
-	if ((playerID.length == 0 && qtty.length == 0) || endPage.length == 0) {
+	if ((isNaN(playerID) && isNaN(qtty)) || isNaN(endPage)) {
 		window.alert("Please specify PlayerID as well as the last page to check (starting from current)");
 	} else {
 		urlsearch.set(fractionSearchValues.active, "true");
@@ -568,7 +568,7 @@ function handleFractionSearchEntry(urlsearch) {
 			urlsearch.set(fractionSearchValues.page, page - 1);
 			openPaginationPage(urlsearch);
 		} else {
-			urlsearch.delete(binarySearchValues.active);
+			urlsearch.delete(fractionSearchValues.active);
 			openFractionsFilterTable(filterTable);
 			openPaginationPage(urlsearch);
 		}
