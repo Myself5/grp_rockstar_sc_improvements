@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		6.0.2
+// @version		6.0.3
 // @description	Improve all kinds of ACP and SocialClub features
 // @author		Myself5
 // @updateURL	https://g.m5.cx/GRSI.user.js
@@ -1501,7 +1501,7 @@ function injectPageChooser() {
 		var datechooser = document.createElement("input");
 		var today = new Date();
 		datechooser.type = 'datetime-local';
-		datechooser.value = today.getFullYear() + "-" + (today.getMonth() + 1) + "-" + today.getDate() + "T00:00"
+		datechooser.value = today.getFullYear() + "-" + ( "0" + (today.getMonth() + 1)).slice(-2) + "-" + ("0" + today.getDate()).slice(-2) + "T00:00"
 		datechooser.style.padding = "4px"
 		datechooser.style.height = "30px"
 		liDate.appendChild(datechooser);
