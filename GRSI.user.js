@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		6.0.1
+// @version		6.0.2
 // @description	Improve all kinds of ACP and SocialClub features
 // @author		Myself5
 // @updateURL	https://g.m5.cx/GRSI.user.js
@@ -100,8 +100,9 @@ const fractionSearchValues = {
 	inputPage: 'fractionSearchEndPage',
 	inputQTTY: 'fractionSearchQTTY',
 	active: 'fractionSearchActive',
+	mainTable: 'body > div.app-layout-canvas > div > main > div > div:nth-child(2) > div.card-block > table',
+	reverse: 'fractionSearchReverse',
 	tblSelectors: {
-		mainTable: 'body > div.app-layout-canvas > div > main > div > div:nth-child(2) > div.card-block > table',
 		nick: 0,
 		id: 1,
 		action: 2,
@@ -493,7 +494,7 @@ function initFractionPage() {
 	formBlock.appendChild(qttyFormGroup);
 
 	var filterFormGroup = document.createElement('div');
-	filterFormGroup.className = 'form-group';
+	filterFormGroup.className = 'form-group m-b-0';
 	var filterButton = document.createElement('button');
 	filterButton.title = "Click to filter content by PlayerID and/or Quantity"
 	filterButton.innerHTML = "Filter";
@@ -506,8 +507,18 @@ function initFractionPage() {
 	formBlock.appendChild(filterFormGroup);
 }
 
-function addToTable(arr, tbl, item, index) {
-	arr[item].push(tbl.rows.item(index).cells.item(item).textContent);
+function addToTable(arr, tbl, selectors, index) {
+	for (const [key, selectorValue] of Object.entries(selectors)) {
+		arr[selectorValue].push(tbl.rows.item(index).cells.item(selectorValue).textContent);
+	}
+}
+
+function checkAndAddtoTable(table, filterTable, playerID, qtty, index) {
+	var tblID = parseInt(table.rows.item(index).cells.item(fractionSearchValues.tblSelectors.id).textContent);
+	var tblQTTY = parseInt(table.rows.item(index).cells.item(fractionSearchValues.tblSelectors.qtty).textContent);
+	if (tblID == playerID || tblQTTY == qtty) {
+		addToTable(filterTable, table, fractionSearchValues.tblSelectors, index);
+	}
 }
 
 function handleFractionSearchEntry(urlsearch) {
@@ -517,7 +528,6 @@ function handleFractionSearchEntry(urlsearch) {
 		playerID = parseInt(document.getElementById(fractionSearchValues.inputID).value);
 		endPage = parseInt(document.getElementById(fractionSearchValues.inputPage).value);
 		qtty = parseInt(document.getElementById(fractionSearchValues.inputQTTY).value);
-		urlsearch = new URLSearchParams(location.search);
 		urlsearch.set(fractionSearchValues.inputID, playerID);
 		urlsearch.set(fractionSearchValues.inputPage, endPage);
 		urlsearch.set(fractionSearchValues.inputQTTY, qtty);
@@ -527,6 +537,7 @@ function handleFractionSearchEntry(urlsearch) {
 		endPage = parseInt(urlsearch.get(fractionSearchValues.inputPage));
 		qtty = parseInt(urlsearch.get(fractionSearchValues.inputQTTY));
 	}
+
 	if ((isNaN(playerID) && isNaN(qtty)) || isNaN(endPage)) {
 		window.alert("Please specify PlayerID as well as the last page to check (starting from current)");
 	} else {
@@ -535,43 +546,34 @@ function handleFractionSearchEntry(urlsearch) {
 		if (isNaN(page)) {
 			page = 1;
 		}
+		if (page < endPage) {
+			urlsearch.set(fractionSearchValues.page, page + 1);
+			urlsearch.delete(fractionSearchValues.reverse);
+		} else if (page > endPage) {
+			urlsearch.set(fractionSearchValues.page, page - 1);
+			urlsearch.set(fractionSearchValues.reverse, "true");
+		}
 		var filterTable = JSON.parse(GM_getValue(fractionSearchValues.tblGMPrefix + "_" + playerID + "_" + qtty, fractionSearchValues.tblDefault));
-		var table = $(fractionSearchValues.tblSelectors.mainTable)[0];
+		var table = $(fractionSearchValues.mainTable)[0];
 		if (filterTable[0].length == 0 && table.rows.length > 0) {
 			// Add Headlines once
-			addToTable(filterTable, table, fractionSearchValues.tblSelectors.nick, 0);
-			addToTable(filterTable, table, fractionSearchValues.tblSelectors.id, 0);
-			addToTable(filterTable, table, fractionSearchValues.tblSelectors.action, 0);
-			addToTable(filterTable, table, fractionSearchValues.tblSelectors.qtty, 0);
-			addToTable(filterTable, table, fractionSearchValues.tblSelectors.additionalInfo, 0);
-			addToTable(filterTable, table, fractionSearchValues.tblSelectors.rank, 0);
-			addToTable(filterTable, table, fractionSearchValues.tblSelectors.date, 0);
+			addToTable(filterTable, table, fractionSearchValues.tblSelectors, 0);
 		}
-		for (let i = 1; i < table.rows.length; i++) {
-			var tblID = parseInt(table.rows.item(i).cells.item(fractionSearchValues.tblSelectors.id).textContent);
-			var tblQTTY = parseInt(table.rows.item(i).cells.item(fractionSearchValues.tblSelectors.qtty).textContent);
-			if (tblID == playerID || tblQTTY == qtty) {
-				addToTable(filterTable, table, fractionSearchValues.tblSelectors.nick, i);
-				addToTable(filterTable, table, fractionSearchValues.tblSelectors.id, i);
-				addToTable(filterTable, table, fractionSearchValues.tblSelectors.action, i);
-				addToTable(filterTable, table, fractionSearchValues.tblSelectors.qtty, i);
-				addToTable(filterTable, table, fractionSearchValues.tblSelectors.additionalInfo, i);
-				addToTable(filterTable, table, fractionSearchValues.tblSelectors.rank, i);
-				addToTable(filterTable, table, fractionSearchValues.tblSelectors.date, i);
+		if (urlsearch.get(fractionSearchValues.reverse) === "true") {
+			for (let i = (table.rows.length - 1); i > 0; i--) {
+				checkAndAddtoTable(table, filterTable, playerID, qtty, i);
+			}
+		} else {
+			for (let i = 1; i < table.rows.length; i++) {
+				checkAndAddtoTable(table, filterTable, playerID, qtty, i);
 			}
 		}
 		GM_setValue(fractionSearchValues.tblGMPrefix + "_" + playerID + "_" + qtty, JSON.stringify(filterTable));
-		if (page < endPage) {
-			urlsearch.set(fractionSearchValues.page, page + 1);
-			openPaginationPage(urlsearch);
-		} else if (page > endPage) {
-			urlsearch.set(fractionSearchValues.page, page - 1);
-			openPaginationPage(urlsearch);
-		} else {
+		if (page == endPage) {
 			urlsearch.delete(fractionSearchValues.active);
 			openFractionsFilterTable(filterTable);
-			openPaginationPage(urlsearch);
 		}
+		openPaginationPage(urlsearch);
 	}
 }
 
@@ -1429,7 +1431,7 @@ function findInitialRange(urlsearch) {
 				break;
 			case 1:
 				urlsearch.set(binarySearchValues.initialRangeFound, "true");
-				let mid = l + Math.floor((r - l) / 2);
+				var mid = l + Math.floor((r - l) / 2);
 				urlsearch.set(binarySearchValues.page, mid);
 				break;
 			case -1:
@@ -1515,7 +1517,7 @@ function injectPageChooser() {
 			} else {
 				if (window.confirm("Do you really want to search for this date: " + datechooser.value + "?"
 					+ "\n(The Tab will continue to reload until the search is done)")) {
-					urlsearch = new URLSearchParams(location.search);
+					var urlsearch = new URLSearchParams(location.search);
 					urlsearch.set(binarySearchValues.search, datechooser.value);
 					urlsearch.delete(binarySearchValues.l);
 					urlsearch.delete(binarySearchValues.r);
