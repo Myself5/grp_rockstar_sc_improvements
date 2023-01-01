@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		6.0.3
+// @version		6.0.4
 // @description	Improve all kinds of ACP and SocialClub features
 // @author		Myself5
 // @updateURL	https://g.m5.cx/GRSI.user.js
@@ -531,7 +531,7 @@ function handleFractionSearchEntry(urlsearch) {
 		urlsearch.set(fractionSearchValues.inputID, playerID);
 		urlsearch.set(fractionSearchValues.inputPage, endPage);
 		urlsearch.set(fractionSearchValues.inputQTTY, qtty);
-		GM_deleteValue(fractionSearchValues.tblGMPrefix + "_" + playerID + "_" + qtty);
+		GM_deleteValue(fractionSearchValues.tblGMPrefix + playerID + "_" + qtty);
 	} else {
 		playerID = parseInt(urlsearch.get(fractionSearchValues.inputID));
 		endPage = parseInt(urlsearch.get(fractionSearchValues.inputPage));
@@ -553,7 +553,7 @@ function handleFractionSearchEntry(urlsearch) {
 			urlsearch.set(fractionSearchValues.page, page - 1);
 			urlsearch.set(fractionSearchValues.reverse, "true");
 		}
-		var filterTable = JSON.parse(GM_getValue(fractionSearchValues.tblGMPrefix + "_" + playerID + "_" + qtty, fractionSearchValues.tblDefault));
+		var filterTable = JSON.parse(GM_getValue(fractionSearchValues.tblGMPrefix + playerID + "_" + qtty, fractionSearchValues.tblDefault));
 		var table = $(fractionSearchValues.mainTable)[0];
 		if (filterTable[0].length == 0 && table.rows.length > 0) {
 			// Add Headlines once
@@ -568,7 +568,7 @@ function handleFractionSearchEntry(urlsearch) {
 				checkAndAddtoTable(table, filterTable, playerID, qtty, i);
 			}
 		}
-		GM_setValue(fractionSearchValues.tblGMPrefix + "_" + playerID + "_" + qtty, JSON.stringify(filterTable));
+		GM_setValue(fractionSearchValues.tblGMPrefix + playerID + "_" + qtty, JSON.stringify(filterTable));
 		if (page == endPage) {
 			urlsearch.delete(fractionSearchValues.active);
 			openFractionsFilterTable(filterTable);
