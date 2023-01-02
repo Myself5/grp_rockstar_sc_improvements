@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		7.0.2
+// @version		7.1.0
 // @description	Improve all kinds of ACP and SocialClub features
 // @author		Myself5
 // @updateURL	https://g.m5.cx/GRSI.user.js
@@ -99,6 +99,9 @@ const authLogValues = {
 	paginationLastPage: '#DataTables_Table_0_paginate > ul > li > a.pagination-link',
 	active: 'authLogSearchActive',
 	initialPageCheck: 'authLogSearchInitialPageCheck',
+	compareIP: 'authLogSearchCompareIP',
+	levelSelector: '#header-navbar-collapse > ul > li.dropdown.dropdown-profile > a > span',
+	minimalIPLevel: 5,
 	mainTable: 'body > div.app-layout-canvas > div > main > div > div:nth-child(2) > div.card-block > table',
 	searchParams: {
 		default: 'skip',
@@ -427,6 +430,14 @@ function initSearchButton(pathSelectors, button_listener) {
 				scset = true;
 			}
 
+			var compareIP = false;
+			if (!ipset) {
+				var levelInt = parseInt($(pathSelectors.levelSelector)[0].textContent.split('(')[1].replace(/\D/g, ""));
+				if (levelInt > pathSelectors.minimalIPLevel) {
+					compareIP = window.confirm("Do you want to check for IP Changes?");
+				}
+			}
+
 			if (nickset || idset || ipset || scset) {
 				if (window.confirm(
 					"Do you want to summarize all pages with the following parameters?\n"
@@ -444,6 +455,7 @@ function initSearchButton(pathSelectors, button_listener) {
 					urlsearch.set(pathSelectors.searchParams.page, pathSelectors.initialSearchPage);
 					urlsearch.set(pathSelectors.active, "true");
 					urlsearch.set(pathSelectors.initialPageCheck, "true");
+					urlsearch.set(pathSelectors.compareIP, compareIP);
 					openPaginationPage(urlsearch);
 				}
 			} else {
@@ -672,10 +684,10 @@ function handleFractionSearchEntry(urlsearch) {
 	}
 }
 
-function objTableContains(objTable, entry) {
+function objTableContains(objTable, entry, compareIP) {
 	for (var i = 0; i < objTable.length; i++) {
 		if (objTable[i].id === entry.id
-			&& objTable[i].ip === entry.ip
+			&& (!compareIP || (compareIP && objTable[i].ip === entry.ip))
 			&& objTable[i].sc === entry.sc) {
 			return true;
 		}
@@ -706,6 +718,7 @@ function handleAuthLogSummary(urlsearch) {
 		return;
 	}
 
+	var compareIP = urlsearch.get(authLogValues.compareIP) === "true";
 	var page = parseInt(urlsearch.get(authLogValues.searchParams.page));
 
 	var objectTable = JSON.parse(GM_getValue(
@@ -724,7 +737,7 @@ function handleAuthLogSummary(urlsearch) {
 		entry.sc = table.rows.item(i).cells.item(authLogValues.tblSelectors.sc).textContent;
 		entry.date = table.rows.item(i).cells.item(authLogValues.tblSelectors.date).textContent + " (Page: " + page + ")";
 
-		if (!objTableContains(objectTable, entry)) {
+		if (!objTableContains(objectTable, entry, compareIP)) {
 			objectTable.push(entry);
 		}
 	}
