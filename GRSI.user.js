@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		7.0.0
+// @version		7.0.1
 // @description	Improve all kinds of ACP and SocialClub features
 // @author		Myself5
 // @updateURL	https://g.m5.cx/GRSI.user.js
@@ -672,8 +672,7 @@ function handleFractionSearchEntry(urlsearch) {
 
 function objTableContains(objTable, entry) {
 	for (var i = 0; i < objTable.length; i++) {
-		if (objTable[i].nick === entry.nick
-			&& objTable[i].id === entry.id
+		if (objTable[i].id === entry.id
 			&& objTable[i].ip === entry.ip
 			&& objTable[i].sc === entry.sc) {
 			return true;
