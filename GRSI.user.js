@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		6.0.4
+// @version		7.0.0
 // @description	Improve all kinds of ACP and SocialClub features
 // @author		Myself5
 // @updateURL	https://g.m5.cx/GRSI.user.js
@@ -79,7 +79,36 @@ const _selectorTypes = { socialclub: 0, money: 1, fraction: 2 };
 const _authLogCount = "body > div.app-layout-canvas > div > main > div > div.row > div";
 const _authLogHeader = "body > div.app-layout-canvas > div > main > div > div:nth-child(2) > div > table > thead > tr > th:nth-child(4)";
 const _authLogTable = "body > div.app-layout-canvas > div > main > div > div:nth-child(2) > div > table > tbody > tr > td:nth-child(4)";
-const authLogSelectors = { count: _authLogCount, header: _authLogHeader, table: _authLogTable, type: _selectorTypes.socialclub };
+const authLogValues = {
+	count: _authLogCount,
+	header: _authLogHeader,
+	table: _authLogTable,
+	type: _selectorTypes.socialclub,
+	tblSelectors: {
+		nick: 0,
+		id: 1,
+		ip: 2,
+		sc: 3,
+		date: 4
+	},
+	searchAll: true,
+	initialSearchPage: 1000000,
+	tblDefault: '[]',
+	filterTableDefault: [[], [], [], [], []],
+	tblGMPrefix: 'ACPAuthLogFilterPrefix_',
+	paginationLastPage: '#DataTables_Table_0_paginate > ul > li > a.pagination-link',
+	active: 'authLogSearchActive',
+	initialPageCheck: 'authLogSearchInitialPageCheck',
+	mainTable: 'body > div.app-layout-canvas > div > main > div > div:nth-child(2) > div.card-block > table',
+	searchParams: {
+		default: 'skip',
+		nick: 'nick',
+		id: 'accid',
+		ip: 'ip',
+		sc: 'socialclub',
+		page: 'page'
+	},
+};
 
 const _moneyLogCount = "body > div.app-layout-canvas > div > main > div > div.row > div";
 const _moneyLogHeader = "body > div.app-layout-canvas > div > main > div > div:nth-child(2) > div > table > thead > tr > th:nth-child(4)";
@@ -363,7 +392,70 @@ function initSearchButton(pathSelectors, button_listener) {
 	}
 	optionsbutton.innerHTML = "Options";
 
-	search_button.after(optionsbutton);
+	if (pathSelectors.searchAll) {
+		var searchAllButton = document.createElement('button');
+		searchAllButton.title = "Click to search and summarize all pages";
+		searchAllButton.type = "button";
+		searchAllButton.className = "btn btn-default";
+		searchAllButton.onclick = function () {
+			var nickset = false;
+			var idset = false;
+			var ipset = false;
+			var scset = false;
+			var nickname = document.getElementById(pathSelectors.searchParams.nick).value;
+			if (nickname.length == 0) {
+				nickname = pathSelectors.searchParams.default;
+			} else {
+				nickset = true;
+			}
+			var playerID = document.getElementById(pathSelectors.searchParams.id).value;
+			if (playerID.length == 0) {
+				playerID = pathSelectors.searchParams.default;
+			} else {
+				idset = true;
+			}
+			var ip = document.getElementById(pathSelectors.searchParams.ip).value;
+			if (ip.length == 0) {
+				ip = pathSelectors.searchParams.default;
+			} else {
+				ipset = true;
+			}
+			var socialclub = document.getElementById(pathSelectors.searchParams.sc).value;
+			if (socialclub.length == 0) {
+				socialclub = pathSelectors.searchParams.default;
+			} else {
+				scset = true;
+			}
+
+			if (nickset || idset || ipset || scset) {
+				if (window.confirm(
+					"Do you want to summarize all pages with the following parameters?\n"
+					+ (nickset ? ("Nickname: " + nickname + "\n") : "")
+					+ (idset ? ("ID: " + playerID + "\n") : "")
+					+ (ipset ? ("IP: " + ip + "\n") : "")
+					+ (scset ? ("SocialClub: " + socialclub + "\n") : "")
+				)) {
+					// Start Processing by going to oldest Page
+					var urlsearch = new URLSearchParams(location.search);
+					urlsearch.set(pathSelectors.searchParams.nick, nickname);
+					urlsearch.set(pathSelectors.searchParams.id, playerID);
+					urlsearch.set(pathSelectors.searchParams.ip, ip);
+					urlsearch.set(pathSelectors.searchParams.sc, socialclub);
+					urlsearch.set(pathSelectors.searchParams.page, pathSelectors.initialSearchPage);
+					urlsearch.set(pathSelectors.active, "true");
+					urlsearch.set(pathSelectors.initialPageCheck, "true");
+					openPaginationPage(urlsearch);
+				}
+			} else {
+				window.alert("No Search parameters defined. Search All no possible.");
+			}
+		}
+		searchAllButton.innerHTML = "Search All";
+		search_button.after(searchAllButton);
+		searchAllButton.after(optionsbutton);
+	} else {
+		search_button.after(optionsbutton);
+	}
 
 	var optionsspoiler = document.createElement('div');
 	optionsspoiler.id = "optionsspoiler";
@@ -513,7 +605,7 @@ function addToTable(arr, tbl, selectors, index) {
 	}
 }
 
-function checkAndAddtoTable(table, filterTable, playerID, qtty, index) {
+function checkAndAddtoFractionsTable(table, filterTable, playerID, qtty, index) {
 	var tblID = parseInt(table.rows.item(index).cells.item(fractionSearchValues.tblSelectors.id).textContent);
 	var tblQTTY = parseInt(table.rows.item(index).cells.item(fractionSearchValues.tblSelectors.qtty).textContent);
 	if (tblID == playerID || tblQTTY == qtty) {
@@ -561,23 +653,110 @@ function handleFractionSearchEntry(urlsearch) {
 		}
 		if (urlsearch.get(fractionSearchValues.reverse) === "true") {
 			for (let i = (table.rows.length - 1); i > 0; i--) {
-				checkAndAddtoTable(table, filterTable, playerID, qtty, i);
+				checkAndAddtoFractionsTable(table, filterTable, playerID, qtty, i);
 			}
 		} else {
 			for (let i = 1; i < table.rows.length; i++) {
-				checkAndAddtoTable(table, filterTable, playerID, qtty, i);
+				checkAndAddtoFractionsTable(table, filterTable, playerID, qtty, i);
 			}
 		}
 		GM_setValue(fractionSearchValues.tblGMPrefix + playerID + "_" + qtty, JSON.stringify(filterTable));
 		if (page == endPage) {
 			urlsearch.delete(fractionSearchValues.active);
-			openFractionsFilterTable(filterTable);
+			openFilterTable(filterTable, urlsearch);
+			return;
 		}
 		openPaginationPage(urlsearch);
 	}
 }
 
-function openFractionsFilterTable(filterTable) {
+function objTableContains(objTable, entry) {
+	for (var i = 0; i < objTable.length; i++) {
+		if (objTable[i].nick === entry.nick
+			&& objTable[i].id === entry.id
+			&& objTable[i].ip === entry.ip
+			&& objTable[i].sc === entry.sc) {
+			return true;
+		}
+	}
+	return false;
+}
+
+function handleAuthLogSummary(urlsearch) {
+	var table = $(authLogValues.mainTable)[0];
+	if (urlsearch.get(authLogValues.initialPageCheck) === "true") {
+		var oldestPage = parseInt($(authLogValues.paginationLastPage).last().text());
+		if (isNaN(oldestPage)) {
+			oldestPage = 1;
+		}
+		urlsearch.delete(authLogValues.initialPageCheck);
+		urlsearch.set(authLogValues.searchParams.page, oldestPage);
+
+		openPaginationPage(urlsearch);
+		return;
+	}
+
+	var nickname = urlsearch.get(authLogValues.searchParams.nick);
+	var playerID = urlsearch.get(authLogValues.searchParams.id);
+	var ip = urlsearch.get(authLogValues.searchParams.ip);
+	var socialclub = urlsearch.get(authLogValues.searchParams.sc);
+	var page = parseInt(urlsearch.get(authLogValues.searchParams.page));
+
+	var objectTable = JSON.parse(GM_getValue(
+		authLogValues.tblGMPrefix
+		+ nickname + "_"
+		+ playerID + "_"
+		+ ip + "_"
+		+ socialclub + "_"
+		, authLogValues.tblDefault));
+
+	for (let i = (table.rows.length - 1); i > 0; i--) {
+		var entry = { ...authLogValues.tblSelectors };
+		entry.nick = table.rows.item(i).cells.item(authLogValues.tblSelectors.nick).textContent;
+		entry.id = table.rows.item(i).cells.item(authLogValues.tblSelectors.id).textContent;
+		entry.ip = table.rows.item(i).cells.item(authLogValues.tblSelectors.ip).textContent;
+		entry.sc = table.rows.item(i).cells.item(authLogValues.tblSelectors.sc).textContent;
+		entry.date = table.rows.item(i).cells.item(authLogValues.tblSelectors.date).textContent + " (Page: " + page + ")";
+
+		if (!objTableContains(objectTable, entry)) {
+			objectTable.push(entry);
+		}
+	}
+
+	if (page == 1) {
+		// Convert objectTable to filterTable
+		var filterTable = [...authLogValues.filterTableDefault];
+		if (filterTable[0].length == 0 && table.rows.length > 0) {
+			// Add Headlines once
+			addToTable(filterTable, table, authLogValues.tblSelectors, 0);
+		}
+
+		for (var i = 0; i < objectTable.length; i++) {
+			filterTable[authLogValues.tblSelectors.nick].push(objectTable[i].nick);
+			filterTable[authLogValues.tblSelectors.id].push(objectTable[i].id);
+			filterTable[authLogValues.tblSelectors.ip].push(objectTable[i].ip);
+			filterTable[authLogValues.tblSelectors.sc].push(objectTable[i].sc);
+			filterTable[authLogValues.tblSelectors.date].push(objectTable[i].date);
+		}
+
+		urlsearch.delete(authLogValues.active);
+		openFilterTable(filterTable, urlsearch);
+		return;
+	} else {
+		GM_setValue(
+			authLogValues.tblGMPrefix
+			+ nickname + "_"
+			+ playerID + "_"
+			+ ip + "_"
+			+ socialclub + "_"
+			, JSON.stringify(objectTable));
+
+		urlsearch.set(authLogValues.searchParams.page, page - 1);
+	}
+	openPaginationPage(urlsearch);
+}
+
+function openFilterTable(filterTable, urlsearch) {
 	var tbl = document.createElement('table'),
 		header = tbl.createTHead();
 	tbl.width = "90%";
@@ -613,6 +792,7 @@ function openFractionsFilterTable(filterTable) {
 		var bdy = document.createElement('body');
 		bdy.appendChild(tbl);
 		newWindow.document.body = bdy;
+		openPaginationPage(urlsearch);
 	}, false);
 }
 
@@ -1293,7 +1473,6 @@ function processRSPlayerCards(playerCards) {
 						if (searched_acc.name === uname) {
 							submitSCResult(uname, scValueTypes.scid, scid);
 							if (closeAfterProcess.activeTab) {
-								console.log("processRSPlayerCards");
 								window.parent.close();
 							}
 						}
@@ -1501,14 +1680,13 @@ function injectPageChooser() {
 		var datechooser = document.createElement("input");
 		var today = new Date();
 		datechooser.type = 'datetime-local';
-		datechooser.value = today.getFullYear() + "-" + ( "0" + (today.getMonth() + 1)).slice(-2) + "-" + ("0" + today.getDate()).slice(-2) + "T00:00"
+		datechooser.value = today.getFullYear() + "-" + ("0" + (today.getMonth() + 1)).slice(-2) + "-" + ("0" + today.getDate()).slice(-2) + "T00:00"
 		datechooser.style.padding = "4px"
 		datechooser.style.height = "30px"
 		liDate.appendChild(datechooser);
 		pagination[0].appendChild(liDate);
 		var liA = document.createElement("li");
 		var a = document.createElement("a");
-		a.className = 'pagination-link';
 		a.href = "javascript:void(0)";
 		a.innerHTML = "Go";
 		a.onclick = (function () {
@@ -1558,11 +1736,15 @@ window.addEventListener('load', function () {
 			handleFractionSearchEntry(searchparams);
 			return;
 		}
+		if (searchparams.get(authLogValues.active) == 'true') {
+			handleAuthLogSummary(searchparams);
+			return;
+		}
 		if (pathPlayerSearch.test(location.pathname)) {
 			initSearchButton(playerSearchSelectors, true);
 		}
 		if (pathAuthLogs.test(location.pathname)) {
-			initSearchButton(authLogSelectors, false);
+			initSearchButton(authLogValues, false);
 		}
 		if (pathMoneyLogs.test(location.pathname)) {
 			initSearchButton(moneyLogSelectors, false);
