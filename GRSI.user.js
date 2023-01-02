@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		7.0.1
+// @version		7.0.2
 // @description	Improve all kinds of ACP and SocialClub features
 // @author		Myself5
 // @updateURL	https://g.m5.cx/GRSI.user.js
@@ -660,12 +660,14 @@ function handleFractionSearchEntry(urlsearch) {
 				checkAndAddtoFractionsTable(table, filterTable, playerID, qtty, i);
 			}
 		}
-		GM_setValue(fractionSearchValues.tblGMPrefix + playerID + "_" + qtty, JSON.stringify(filterTable));
+
 		if (page == endPage) {
 			urlsearch.delete(fractionSearchValues.active);
 			openFilterTable(filterTable, urlsearch);
+			GM_deleteValue(fractionSearchValues.tblGMPrefix + playerID + "_" + qtty);
 			return;
 		}
+		GM_setValue(fractionSearchValues.tblGMPrefix + playerID + "_" + qtty, JSON.stringify(filterTable));
 		openPaginationPage(urlsearch);
 	}
 }
@@ -683,6 +685,10 @@ function objTableContains(objTable, entry) {
 
 function handleAuthLogSummary(urlsearch) {
 	var table = $(authLogValues.mainTable)[0];
+	var nickname = urlsearch.get(authLogValues.searchParams.nick);
+	var playerID = urlsearch.get(authLogValues.searchParams.id);
+	var ip = urlsearch.get(authLogValues.searchParams.ip);
+	var socialclub = urlsearch.get(authLogValues.searchParams.sc);
 	if (urlsearch.get(authLogValues.initialPageCheck) === "true") {
 		var oldestPage = parseInt($(authLogValues.paginationLastPage).last().text());
 		if (isNaN(oldestPage)) {
@@ -690,15 +696,16 @@ function handleAuthLogSummary(urlsearch) {
 		}
 		urlsearch.delete(authLogValues.initialPageCheck);
 		urlsearch.set(authLogValues.searchParams.page, oldestPage);
-
+		GM_deleteValue(
+			authLogValues.tblGMPrefix
+			+ nickname + "_"
+			+ playerID + "_"
+			+ ip + "_"
+			+ socialclub);
 		openPaginationPage(urlsearch);
 		return;
 	}
 
-	var nickname = urlsearch.get(authLogValues.searchParams.nick);
-	var playerID = urlsearch.get(authLogValues.searchParams.id);
-	var ip = urlsearch.get(authLogValues.searchParams.ip);
-	var socialclub = urlsearch.get(authLogValues.searchParams.sc);
 	var page = parseInt(urlsearch.get(authLogValues.searchParams.page));
 
 	var objectTable = JSON.parse(GM_getValue(
@@ -706,7 +713,7 @@ function handleAuthLogSummary(urlsearch) {
 		+ nickname + "_"
 		+ playerID + "_"
 		+ ip + "_"
-		+ socialclub + "_"
+		+ socialclub
 		, authLogValues.tblDefault));
 
 	for (let i = (table.rows.length - 1); i > 0; i--) {
@@ -740,6 +747,12 @@ function handleAuthLogSummary(urlsearch) {
 
 		urlsearch.delete(authLogValues.active);
 		openFilterTable(filterTable, urlsearch);
+		GM_deleteValue(
+			authLogValues.tblGMPrefix
+			+ nickname + "_"
+			+ playerID + "_"
+			+ ip + "_"
+			+ socialclub);
 		return;
 	} else {
 		GM_setValue(
@@ -747,7 +760,7 @@ function handleAuthLogSummary(urlsearch) {
 			+ nickname + "_"
 			+ playerID + "_"
 			+ ip + "_"
-			+ socialclub + "_"
+			+ socialclub
 			, JSON.stringify(objectTable));
 
 		urlsearch.set(authLogValues.searchParams.page, page - 1);
