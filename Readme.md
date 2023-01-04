@@ -39,6 +39,7 @@
 ### Common
 * Scroll to top by clicking the russian headlines
 * Local storage system using Tampermokeys ```GM_getValue``` and ```GM_setValue``` features
+* Import a list of known Cheater SocialClubs seperated by a new line (`\r\n`), as found in Google Docs
 * Automatically Process SocialClubs
 	* Automatically detect and store searchresults done on the Rockstar members list
 	* Option: Close SocialClub website after processing
@@ -141,3 +142,18 @@ Alternatively, the script is hosted on [my Website](https://g.m5.cx/GRSI.user.js
 * After confirming the search query, the Script will go through all pages and create a summary table of all unique ID, SocialClub and (optionally) IP pairs.
 
 ![Authorization Summary](Pictures/authorization_logs_summary.png?raw=true)
+
+### __Overall__
+* Import Cheater list by going to the dropdown menu
+
+![Import Cheater Dropdown](Pictures/import_cheater_dropdown.png?raw=true)
+
+* Copy and Paste the table into the prompt, continue by pressing OK
+
+![Import Cheater Table](Pictures/import_cheater_table.png?raw=true)
+![Import Cheater Prompt](Pictures/import_cheater_prompt.png?raw=true)
+
+* After the successful import has been confirmed, the added SocialClubs will be marked as cheaters. You can still manually mark and unmark them.
+
+![Import Cheater Confirmation](Pictures/import_cheater_confirmed.png?raw=true)
+![Import Cheater Result](Pictures/import_cheater_result.png?raw=true)
