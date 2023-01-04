@@ -1,12 +1,13 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		7.2.0
+// @version		7.2.1
 // @description	Improve all kinds of ACP and SocialClub features
 // @author		Myself5
 // @updateURL	https://g.m5.cx/GRSI.user.js
 // @downloadURL	https://g.m5.cx/GRSI.user.js
 // @match		https://gta5grand.com/admin_*
+// @match		https://gta5grand.com/acptable
 // @match		https://socialclub.rockstargames.com/members*
 // @grant		GM_getValue
 // @grant		GM_setValue
@@ -67,7 +68,8 @@ const binarySearchValues = {
 var acpTableCount = "";
 const baseURL = "https://socialclub.rockstargames.com/members/";
 const hostnameACP = 'gta5grand.com';
-const acpTableDummy = 'https://gta5grand.com/acptable';
+const acpTable = 'acptable';
+const acpTableDummy = websiteACP + '/' + acpTable;
 const pathAuthLogs = new RegExp('/admin_.*\/logs\/authorization');
 const pathMoneyLogs = new RegExp('/admin_.*\/logs\/money');
 const pathFractionLogs = new RegExp('/admin_.*\/logs\/fraction');
@@ -790,6 +792,7 @@ function openFilterTable(filterTable, urlsearch) {
 	tbl.style.border = '1px solid #ddd';
 	tbl.style.borderCollapse = "collapse";
 	tbl.style.fontFamily = "Roboto,sans-serif";
+	tbl.id = acpTable;
 
 	var headerRow = header.insertRow();
 
@@ -819,6 +822,76 @@ function openFilterTable(filterTable, urlsearch) {
 		newWindow.document.body = bdy;
 		openPaginationPage(urlsearch);
 	}, false);
+}
+
+function InitACPTableSortable() {
+	var checkExist = setInterval(function () {
+		var table = document.getElementById(acpTable);
+		var hdrs = table.rows[0].cells;
+		if (hdrs != null) {
+			for (let i = 0; i < hdrs.length; i++) {
+				hdrs[i].onclick = function () {
+					sortTable(table, i);
+				}
+			}
+			clearInterval(checkExist);
+		}
+	}, 200); // check every 200ms
+}
+
+// Source: https://www.w3schools.com/howto/howto_js_sort_table.asp
+function sortTable(table, n) {
+	var rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
+	switching = true;
+	// Set the sorting direction to ascending:
+	dir = "asc";
+	/* Make a loop that will continue until
+	no switching has been done: */
+	while (switching) {
+		// Start by saying: no switching is done:
+		switching = false;
+		rows = table.rows;
+		/* Loop through all table rows (except the
+		first, which contains table headers): */
+		for (i = 1; i < (rows.length - 1); i++) {
+			// Start by saying there should be no switching:
+			shouldSwitch = false;
+			/* Get the two elements you want to compare,
+			one from current row and one from the next: */
+			x = rows[i].getElementsByTagName("TD")[n];
+			y = rows[i + 1].getElementsByTagName("TD")[n];
+			/* Check if the two rows should switch place,
+			based on the direction, asc or desc: */
+			if (dir == "asc") {
+				if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
+					// If so, mark as a switch and break the loop:
+					shouldSwitch = true;
+					break;
+				}
+			} else if (dir == "desc") {
+				if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
+					// If so, mark as a switch and break the loop:
+					shouldSwitch = true;
+					break;
+				}
+			}
+		}
+		if (shouldSwitch) {
+			/* If a switch has been marked, make the switch
+			and mark that a switch has been done: */
+			rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+			switching = true;
+			// Each time a switch is done, increase this count by 1:
+			switchcount++;
+		} else {
+			/* If no switching has been done AND the direction is "asc",
+			set the direction to "desc" and run the while loop again. */
+			if (switchcount == 0 && dir == "asc") {
+				dir = "desc";
+				switching = true;
+			}
+		}
+	}
 }
 
 function initSCOptionsBoxes() {
@@ -1766,6 +1839,10 @@ function tryConvertSCMap() {
 window.addEventListener('load', function () {
 
 	if (location.hostname === hostnameACP) {
+		if (this.location.pathname === '/' + acpTable) {
+			InitACPTableSortable();
+			return;
+		}
 		var searchparams = new URLSearchParams(location.search);
 		if (searchparams.get(binarySearchValues.active) == 'true') {
 			findInitialRange();
