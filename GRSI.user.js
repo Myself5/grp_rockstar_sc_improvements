@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		7.2.1
+// @version		7.2.2
 // @description	Improve all kinds of ACP and SocialClub features
 // @author		Myself5
 // @updateURL	https://g.m5.cx/GRSI.user.js
@@ -68,8 +68,10 @@ const binarySearchValues = {
 var acpTableCount = "";
 const baseURL = "https://socialclub.rockstargames.com/members/";
 const hostnameACP = 'gta5grand.com';
+const websiteACP = 'https://' + hostnameACP;
 const acpTable = 'acptable';
 const acpTableDummy = websiteACP + '/' + acpTable;
+const playerURLBase = websiteACP + "/" + location.pathname.split('/')[1] + '/account/info/'; // + ID
 const pathAuthLogs = new RegExp('/admin_.*\/logs\/authorization');
 const pathMoneyLogs = new RegExp('/admin_.*\/logs\/money');
 const pathFractionLogs = new RegExp('/admin_.*\/logs\/fraction');
@@ -677,7 +679,7 @@ function handleFractionSearchEntry(urlsearch) {
 
 		if (page == endPage) {
 			urlsearch.delete(fractionSearchValues.active);
-			openFilterTable(filterTable, urlsearch);
+			openFilterTable(filterTable, urlsearch, fractionSearchValues.tblSelectors.id);
 			GM_deleteValue(fractionSearchValues.tblGMPrefix + playerID + "_" + qtty);
 			return;
 		}
@@ -761,7 +763,7 @@ function handleAuthLogSummary(urlsearch) {
 		}
 
 		urlsearch.delete(authLogValues.active);
-		openFilterTable(filterTable, urlsearch);
+		openFilterTable(filterTable, urlsearch, authLogValues.tblSelectors.id);
 		GM_deleteValue(
 			authLogValues.tblGMPrefix
 			+ nickname + "_"
@@ -783,7 +785,7 @@ function handleAuthLogSummary(urlsearch) {
 	openPaginationPage(urlsearch);
 }
 
-function openFilterTable(filterTable, urlsearch) {
+function openFilterTable(filterTable, urlsearch, idfield) {
 	var tbl = document.createElement('table'),
 		header = tbl.createTHead();
 	tbl.width = "90%";
@@ -807,7 +809,16 @@ function openFilterTable(filterTable, urlsearch) {
 		const tr = tbl.insertRow();
 		for (let j = 0; j < filterTable.length; j++) {
 			var cell = tr.insertCell();
-			cell.innerHTML = filterTable[j][i];
+			if (j == idfield) {
+				var a = document.createElement('a');
+				var id = filterTable[j][i];
+				a.href = playerURLBase + id;
+				a.innerHTML = id;
+				a.style.color = "rgb(85, 160, 200)";
+				cell.appendChild(a);
+			} else {
+				cell.innerHTML = filterTable[j][i];
+			}
 			cell.style.border = '1px solid #ddd';
 			cell.style.padding = "10px";
 		}
