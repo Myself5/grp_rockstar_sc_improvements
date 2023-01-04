@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		7.1.0
+// @version		7.2.0
 // @description	Improve all kinds of ACP and SocialClub features
 // @author		Myself5
 // @updateURL	https://g.m5.cx/GRSI.user.js
@@ -1513,8 +1513,21 @@ function processRSPlayerCards(playerCards) {
 	}
 }
 
-function injectVersion() {
+function injectDropDown() {
 	const li = $('#header-navbar-collapse > ul > li.dropdown.dropdown-profile > ul > li')[0];
+	const cheaterentry = document.createElement('a');
+	cheaterentry.innerHTML = "Enter Cheaters";
+	cheaterentry.id = "cheater_prompt";
+	cheaterentry.onclick = function () {
+		var names = window.prompt("Enter Cheater List\n"
+			+ "(Make sure they are from a table and each name is on a new line)").split('\r\n');
+		for (var i = 0; i < names.length; i++) {
+			if (names[i].length > 0) {
+				submitSCResult(names[i], scValueTypes.cheater, true);
+			}
+		}
+		window.alert("All Cheaters imported successfully");
+	}
 	const version = document.createElement('a');
 	version.innerHTML = "GRSI Version: " + GM_info.script.version;
 	version.id = "grsi_version";
@@ -1534,6 +1547,7 @@ function injectVersion() {
 			}
 		}
 	}
+	li.appendChild(cheaterentry);
 	li.appendChild(version);
 }
 
@@ -1779,7 +1793,7 @@ window.addEventListener('load', function () {
 		}
 
 		// Inject Version to account menu
-		injectVersion();
+		injectDropDown();
 
 		injectScrollToTop();
 
