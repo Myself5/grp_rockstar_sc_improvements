@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		7.2.2
+// @version		7.2.3
 // @description	Improve all kinds of ACP and SocialClub features
 // @author		Myself5
 // @updateURL	https://g.m5.cx/GRSI.user.js
@@ -66,7 +66,8 @@ const binarySearchValues = {
 
 // ACP Variables
 var acpTableCount = "";
-const baseURL = "https://socialclub.rockstargames.com/members/";
+const SCbaseURL = "https://socialclub.rockstargames.com";
+const SCbaseURLMembers = SCbaseURL + "/members/";
 const hostnameACP = 'gta5grand.com';
 const websiteACP = 'https://' + hostnameACP;
 const acpTable = 'acptable';
@@ -998,8 +999,9 @@ function initACPOptions(showSCIDCB, autoProcessCB, closeAfterProcessCB, backgrou
 }
 
 function bgCheckSC(sc_name) {
-	var url = baseURL + sc_name + "/" + closeAfterProcessLocationSearch;
-	var win = window.open(url, sc_name, "width= 640, height= 480, left=0, top=0, toolbar=no, location=no, directories=no, status=no, menubar=no, scrollbars=yes, resizable=no, copyhistory=no").blur();
+	var url = SCbaseURLMembers + sc_name + "/" + closeAfterProcessLocationSearch;
+	var win = window.open(url, sc_name, "width= 640, height= 480, left=0, top=0, toolbar=no, location=no, directories=no, status=no, menubar=no, scrollbars=yes, resizable=no, copyhistory=no");
+	win.blur();
 	window.focus();
 }
 
@@ -1018,7 +1020,7 @@ function redrawSCButtons(sc_fields, sc_names) {
 			}
 			sc_fields[i].innerHTML = "<a style='color: rgb(255,255,0);'>"
 				+ (knownCheater ? cheaterTag : "")
-				+ "</a><a style='color: " + fontcolor + ";' href='" + baseURL + sc_names[i] + "/" + ((autoProcess.value && closeAfterProcess.value) ? closeAfterProcessLocationSearch : "") + "' target='_blank'>"
+				+ "</a><a style='color: " + fontcolor + ";' href='" + SCbaseURLMembers + sc_names[i] + "/" + ((autoProcess.value && closeAfterProcess.value) ? closeAfterProcessLocationSearch : "") + "' target='_blank'>"
 				+ sc_names[i]
 				+ "</a><a style='color: " + fontcolor + ";'>"
 				+ ((showSCID.value && scID) ? (" (" + scID + ")") : "")
@@ -1183,6 +1185,12 @@ function initSCButtons(sc_fields, sc_names, pathSelectors) {
 			redrawSCButtons(sc_fields, sc_names);
 		}, false);
 	}
+
+	window.addEventListener("message", (event) => {
+		if (event.origin !== SCbaseURL)
+			return;
+		redrawSCButtons(sc_fields, sc_names);
+	}, false);
 
 	var showSCIDCB = document.getElementById(showSCID.id);
 	var autoProcessCB = document.getElementById(autoProcess.id);
@@ -1362,6 +1370,9 @@ function submitSCResult(name, type, value) {
 				break;
 		}
 		GM_setValue(scStorageIdentifier + name, JSON.stringify(nameObj));
+		if (window.opener != null) {
+			window.opener.postMessage("SC Value updated!", websiteACP);
+		}
 	}
 }
 
@@ -1503,7 +1514,7 @@ function waitForRSPlayerCards() {
 							if (autoProcess.value) {
 								submitSCResult(name, scValueTypes.valid, false);
 								if (closeAfterProcess.activeTab) {
-									window.parent.close();
+									window.close();
 								}
 							}
 						}
@@ -1582,7 +1593,7 @@ function processRSPlayerCards(playerCards) {
 						if (searched_acc.name === uname) {
 							submitSCResult(uname, scValueTypes.scid, scid);
 							if (closeAfterProcess.activeTab) {
-								window.parent.close();
+								window.close();
 							}
 						}
 						document.getElementById("rid_" + uname).innerHTML = "RID: " + scid;
