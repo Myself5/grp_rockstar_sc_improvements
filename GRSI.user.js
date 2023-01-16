@@ -81,22 +81,23 @@ const pathPlayerSearch = new RegExp('/admin_.*\/account\/search');
 const punishmentSearch = new RegExp('/admin_.*\/punishmen\/');
 const moneyMaxValue = 5000000;
 
-const _selectorTypes = { socialclub: 0, money: 1, fraction: 2 };
+const _selectorTypes = {
+	socialclub: 0,
+	money: 1,
+	fraction: 2,
+};
 
-const _authLogCount = "body > div.app-layout-canvas > div > main > div > div.row > div";
-const _authLogHeader = "body > div.app-layout-canvas > div > main > div > div:nth-child(2) > div > table > thead > tr > th:nth-child(4)";
-const _authLogTable = "body > div.app-layout-canvas > div > main > div > div:nth-child(2) > div > table > tbody > tr > td:nth-child(4)";
 const authLogValues = {
-	count: _authLogCount,
-	header: _authLogHeader,
-	table: _authLogTable,
+	count: 'body > div.app-layout-canvas > div > main > div > div.row > div',
+	header: 'body > div.app-layout-canvas > div > main > div > div:nth-child(2) > div > table > thead > tr > th:nth-child(4)',
+	table: 'body > div.app-layout-canvas > div > main > div > div:nth-child(2) > div > table > tbody > tr > td:nth-child(4)',
 	type: _selectorTypes.socialclub,
 	tblSelectors: {
 		nick: 0,
 		id: 1,
 		ip: 2,
 		sc: 3,
-		date: 4
+		date: 4,
 	},
 	searchAll: true,
 	initialSearchPage: 1000000,
@@ -116,21 +117,25 @@ const authLogValues = {
 		id: 'accid',
 		ip: 'ip',
 		sc: 'socialclub',
-		page: 'page'
+		page: 'page',
 	},
 };
 
-const _moneyLogCount = "body > div.app-layout-canvas > div > main > div > div.row > div";
-const _moneyLogHeader = "body > div.app-layout-canvas > div > main > div > div:nth-child(2) > div > table > thead > tr > th:nth-child(4)";
-const _moneyLogNameTable = "body > div.app-layout-canvas > div > main > div > div:nth-child(2) > div > table > tbody > tr > td:nth-child(1) > a";
-const _moneyLogDateTable = "body > div.app-layout-canvas > div > main > div > div:nth-child(2) > div > table > tbody > tr > td:nth-child(2)";
-const _moneyLogQttyTable = "body > div.app-layout-canvas > div > main > div > div:nth-child(2) > div > table > tbody > tr > td:nth-child(4)";
-const moneyLogSelectors = { count: _moneyLogCount, header: _moneyLogHeader, nametable: _moneyLogNameTable, datetable: _moneyLogDateTable, qttytable: _moneyLogQttyTable, type: _selectorTypes.money };
+const moneyLogSelectors = {
+	count: 'body > div.app-layout-canvas > div > main > div > div.row > div',
+	header: 'body > div.app-layout-canvas > div > main > div > div:nth-child(2) > div > table > thead > tr > th:nth-child(4)',
+	nametable: 'body > div.app-layout-canvas > div > main > div > div:nth-child(2) > div > table > tbody > tr > td:nth-child(1) > a',
+	datetable: 'body > div.app-layout-canvas > div > main > div > div:nth-child(2) > div > table > tbody > tr > td:nth-child(2)',
+	qttytable: 'body > div.app-layout-canvas > div > main > div > div:nth-child(2) > div > table > tbody > tr > td:nth-child(4)',
+	type: _selectorTypes.money,
+};
 
-const _playerSearchCount = "#result_count";
-const _playerSearchHeader = "#result-players-list div:nth-child(2) table tr th:nth-child(6)";
-const _playerSearchTable = "#result-players-list div:nth-child(2) table tr td:nth-child(6)";
-const playerSearchSelectors = { count: _playerSearchCount, header: _playerSearchHeader, table: _playerSearchTable, type: _selectorTypes.socialclub };
+const playerSearchSelectors = {
+	count: '#result_count',
+	header: '#result-players-list div:nth-child(2) table tr th:nth-child(6)',
+	table: '#result-players-list div:nth-child(2) table tr td:nth-child(6)',
+	type: _selectorTypes.socialclub,
+};
 
 const fractionSearchValues = {
 	headerBlock: 'logsmoney_post',
@@ -148,10 +153,10 @@ const fractionSearchValues = {
 		qtty: 3,
 		additionalInfo: 4,
 		rank: 5,
-		date: 6
+		date: 6,
 	},
 	tblDefault: '[[],[],[],[],[],[],[]]',
-	tblGMPrefix: 'ACPFractionFilterPrefix_'
+	tblGMPrefix: 'ACPFractionFilterPrefix_',
 };
 
 const punishmentLogs = {
@@ -161,13 +166,13 @@ const punishmentLogs = {
 var showSCID = {
 	id: 'showSCID',
 	value: gmStorageMaps.configOptions.map.has('showSCID') ? gmStorageMaps.configOptions.map.get('showSCID') : optionsDefaultValues.showSCID,
-	desc: "Show SocialClub ID"
+	desc: "Show SocialClub ID",
 };
 var autoProcess = {
 	id: 'autoProcess',
 	value: gmStorageMaps.configOptions.map.has('autoProcess') ? gmStorageMaps.configOptions.map.get('autoProcess') : optionsDefaultValues.autoProcess,
 	spoiler: 'autoProcessOptions',
-	desc: 'Automatically process SC'
+	desc: 'Automatically process SC',
 };
 var closeAfterProcess = {
 	id: 'closeAfterProcess',
@@ -178,13 +183,13 @@ var closeAfterProcess = {
 var backgroundProcessButton = {
 	id: 'backgroundProcessButton',
 	value: gmStorageMaps.configOptions.map.has('backgroundProcessButton') ? gmStorageMaps.configOptions.map.get('backgroundProcessButton') : optionsDefaultValues.backgroundProcessButton,
-	desc: 'Show Button to process SC in Background'
+	desc: 'Show Button to process SC in Background',
 };
 var hideButtonOnProcessedNames = {
 	id: 'hideButtonOnProcessedNames',
 	value: gmStorageMaps.configOptions.map.has('hideButtonOnProcessedNames') ? gmStorageMaps.configOptions.map.get('hideButtonOnProcessedNames') : optionsDefaultValues.hideButtonOnProcessedNames,
 	spoiler: 'hideButtonOnProcessedNamesSpoiler',
-	desc: 'Hide Button on previously processed SCs'
+	desc: 'Hide Button on previously processed SCs',
 };
 
 const scOptionsSpoiler = "<br>\
@@ -241,7 +246,7 @@ const scContextMenu = {
 	resetSC: {
 		id: "scContextMenuResetSC",
 		desc: "Reset SocialClub Validation",
-	}
+	},
 };
 
 var scContextCSSArray =
@@ -1868,7 +1873,7 @@ function initPunishmentLogs() {
 	var idTbl = getTableValues($(punishmentLogs.column));
 	var idtdTbl = $(punishmentLogs.column);
 	for (var i = 0; i < idTbl.length; i++) {
-		urlsearch = new URLSearchParams();
+		var urlsearch = new URLSearchParams();
 		urlsearch.set(authLogValues.searchParams.nick, authLogValues.searchParams.default);
 		urlsearch.set(authLogValues.searchParams.id, idTbl[i]);
 		urlsearch.set(authLogValues.searchParams.ip, authLogValues.searchParams.default);
