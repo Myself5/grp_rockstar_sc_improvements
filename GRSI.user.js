@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		7.3.0
+// @version		7.4.0
 // @description	Improve all kinds of ACP and SocialClub features
 // @author		Myself5
 // @updateURL	https://g.m5.cx/GRSI.user.js
@@ -51,6 +51,7 @@ const retiredGMStorageMaps = {
 const scValueTypes = {
 	valid: 'valid',
 	cheater: 'cheater',
+	pccheck: 'pccheck',
 	scid: 'scid',
 }
 
@@ -215,6 +216,7 @@ const optionSpoilerTypes = [scOptionsSpoiler, moneyOptionsSpoiler];
 
 const zeroWidthWhitespace = '​'; // U+200b, used to split the cheater tag from the SC name when mouse-select-copying
 const cheaterTag = '⌊CHEATER⌋' + zeroWidthWhitespace;
+const pccheckTag = '⌊PC CHECK⌋' + zeroWidthWhitespace;
 
 const scStorageIdentifier = "SCStoragePrefix_";
 
@@ -1022,6 +1024,7 @@ function redrawSCButtons(sc_fields, sc_names) {
 		if (sc_names[i].length != 0) {
 			var fontcolor = "rgb(85, 160, 200)";
 			var scObj = getSCObj(sc_names[i]);
+			var pcCheckTarget = scObj.pccheck;
 			var knownCheater = scObj.cheater;
 			var scID = scObj.scid;
 			const scValid = scObj.valid;
@@ -1030,6 +1033,7 @@ function redrawSCButtons(sc_fields, sc_names) {
 				fontcolor = scValid ? "rgb(0, 255, 0)" : "rgb(255, 0, 0)";
 			}
 			sc_fields[i].innerHTML = "<a style='color: rgb(255,255,0);'>"
+				+ (pcCheckTarget ? pccheckTag : "")
 				+ (knownCheater ? cheaterTag : "")
 				+ "</a><a style='color: " + fontcolor + ";' href='" + SCbaseURLMembers + sc_names[i] + "/" + ((autoProcess.value && closeAfterProcess.value) ? closeAfterProcessLocationSearch : "") + "' target='_blank'>"
 				+ sc_names[i]
@@ -1376,6 +1380,9 @@ function submitSCResult(name, type, value) {
 			case scValueTypes.cheater:
 				nameObj.cheater = value;
 				break;
+			case scValueTypes.pccheck:
+				nameObj.pccheck = value;
+				break;
 			case scValueTypes.scid:
 				nameObj.scid = value;
 				break;
@@ -1634,6 +1641,27 @@ function injectDropDown() {
 		}
 		window.alert("All Cheaters imported successfully");
 	}
+	const pccheckentry = document.createElement('a');
+	pccheckentry.innerHTML = "Enter PC Check Targets";
+	pccheckentry.id = "cheater_prompt";
+	pccheckentry.onclick = async function () {
+		var names = window.prompt("Enter PC Check List\n"
+			+ "(Make sure they are from a table and each name is on a new line)").split('\r\n');
+		var scToBeUpdatedEntries = await GM.listValues();
+		for (let i = 0; i < scToBeUpdatedEntries.length; i++) {
+			if (scToBeUpdatedEntries[i].startsWith(scStorageIdentifier)) {
+				var nameObj = JSON.parse(GM_getValue(scToBeUpdatedEntries[i], "{}"));
+				delete nameObj.pccheck;
+				GM_setValue(scToBeUpdatedEntries[i], JSON.stringify(nameObj));
+			}
+		}
+		for (var i = 0; i < names.length; i++) {
+			if (names[i].length > 0) {
+				submitSCResult(names[i], scValueTypes.pccheck, true);
+			}
+		}
+		window.alert("All PC Check Targets set successfully");
+	}
 	const version = document.createElement('a');
 	version.innerHTML = "GRSI Version: " + GM_info.script.version;
 	version.id = "grsi_version";
@@ -1654,6 +1682,7 @@ function injectDropDown() {
 		}
 	}
 	li.appendChild(cheaterentry);
+	li.appendChild(pccheckentry);
 	li.appendChild(version);
 }
 
