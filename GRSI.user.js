@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		7.2.3
+// @version		7.3.0
 // @description	Improve all kinds of ACP and SocialClub features
 // @author		Myself5
 // @updateURL	https://g.m5.cx/GRSI.user.js
@@ -73,10 +73,12 @@ const websiteACP = 'https://' + hostnameACP;
 const acpTable = 'acptable';
 const acpTableDummy = websiteACP + '/' + acpTable;
 const playerURLBase = websiteACP + "/" + location.pathname.split('/')[1] + '/account/info/'; // + ID
+const authorizationLogsBase = websiteACP + "/" + location.pathname.split('/')[1] + '/logs/authorization'; // + Search
 const pathAuthLogs = new RegExp('/admin_.*\/logs\/authorization');
 const pathMoneyLogs = new RegExp('/admin_.*\/logs\/money');
 const pathFractionLogs = new RegExp('/admin_.*\/logs\/fraction');
 const pathPlayerSearch = new RegExp('/admin_.*\/account\/search');
+const punishmentSearch = new RegExp('/admin_.*\/punishmen\/');
 const moneyMaxValue = 5000000;
 
 const _selectorTypes = { socialclub: 0, money: 1, fraction: 2 };
@@ -150,6 +152,10 @@ const fractionSearchValues = {
 	},
 	tblDefault: '[[],[],[],[],[],[],[]]',
 	tblGMPrefix: 'ACPFractionFilterPrefix_'
+};
+
+const punishmentLogs = {
+	column: 'body > div.app-layout-canvas > div > main > div > div.card > div > table > tbody > tr > td:nth-child(2)',
 };
 
 var showSCID = {
@@ -1858,6 +1864,20 @@ function tryConvertSCMap() {
 	}
 }
 
+function initPunishmentLogs() {
+	var idTbl = getTableValues($(punishmentLogs.column));
+	var idtdTbl = $(punishmentLogs.column);
+	for (var i = 0; i < idTbl.length; i++) {
+		urlsearch = new URLSearchParams();
+		urlsearch.set(authLogValues.searchParams.nick, authLogValues.searchParams.default);
+		urlsearch.set(authLogValues.searchParams.id, idTbl[i]);
+		urlsearch.set(authLogValues.searchParams.ip, authLogValues.searchParams.default);
+		urlsearch.set(authLogValues.searchParams.sc, authLogValues.searchParams.default);
+		var url = authorizationLogsBase + "?" + urlsearch.toString();
+		idtdTbl[i].innerHTML = "<a style='color: rgb(85, 160, 200)' href=" + url + " target='_blank'>" + idTbl[i] + "</a>";
+	}
+}
+
 window.addEventListener('load', function () {
 
 	if (location.hostname === hostnameACP) {
@@ -1889,6 +1909,9 @@ window.addEventListener('load', function () {
 		}
 		if (pathFractionLogs.test(location.pathname)) {
 			initFractionPage();
+		}
+		if (punishmentSearch.test(location.pathname)) {
+			initPunishmentLogs();
 		}
 
 		// Inject Version to account menu
