@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		7.5.0
+// @version		7.6.0
 // @description	Improve all kinds of ACP and SocialClub features
 // @author		Myself5
 // @updateURL	https://g.m5.cx/GRSI.user.js
@@ -848,13 +848,33 @@ function openFilterTable(filterTable, urlsearch, values) {
 		cell.style.padding = "10px";
 	}
 
+	var idMap = new Map();
+	var scMap = new Map();
+	const rowDatePageRegex = /Page: \d*/g;
+
 	for (let i = 1; i < filterTable[0].length; i++) {
 		const tr = tbl.insertRow();
+		const rowID = filterTable[values.tblSelectors.id][i];
+		const rowSC = filterTable[values.tblSelectors.sc][i];
+		const rowDate = filterTable[values.tblSelectors.date][i];
+		const rowDatePage = rowDate.match(rowDatePageRegex);
+		if (idMap.has(rowID)) {
+			idMap.get(rowID).push(rowSC + " [" + rowDatePage + "]");
+		} else {
+			idMap.set(rowID, [rowSC + " [" + rowDatePage + "]"]);
+		}
+
+		if (scMap.has(rowSC)) {
+			scMap.get(rowSC).push(rowID + " [" + rowDatePage + "]");
+		} else {
+			scMap.set(rowSC, [rowID + " [" + rowDatePage + "]"]);
+		}
+
 		for (let j = 0; j < filterTable.length; j++) {
 			var cell = tr.insertCell();
 			if (j == values.tblSelectors.nick) {
 				var a = document.createElement('a');
-				a.href = playerURLBase + filterTable[values.tblSelectors.id][i];
+				a.href = playerURLBase + rowID;
 				a.innerHTML = filterTable[j][i];
 				a.style.color = "rgb(85, 160, 200)";
 				cell.appendChild(a);
@@ -871,6 +891,37 @@ function openFilterTable(filterTable, urlsearch, values) {
 			cell.style.padding = "10px";
 		}
 	}
+
+	var summaryText = document.createElement('p');
+	summaryText.style.textAlign = 'center';
+	summaryText.style.fontFamily = "Roboto,sans-serif";
+	var pg = 1;
+	var text = "<b>IDs:</b><br><br>";
+	idMap.forEach((scs, id) => {
+		text = text + "ID: " + id + " - " + scs[0];
+		if (scs.length > 1) {
+			text = text + " (additional:";
+			for (let i = 1; i < scs.length; i++) {
+				text = text + " " + scs[i];
+			}
+			text = text + ")";
+		}
+		text = text + "<br>";
+	});
+	text = text + "<br><b>SocialClubs:</b><br><br>";
+	scMap.forEach((ids, sc) => {
+		text = text + "SC: " + sc + " - " + ids[0];
+		if (ids.length > 1) {
+			text = text + " (additional:";
+			for (let i = 1; i < ids.length; i++) {
+				text = text + " " + ids[i];
+			}
+			text = text + ")";
+		}
+		text = text + "<br>";
+	});
+	summaryText.innerHTML = text;
+
 	var newWindow = window.open(acpTableDummy);
 	newWindow.addEventListener('load', function () {
 		newWindow.document.head.innerHTML =
@@ -878,6 +929,7 @@ function openFilterTable(filterTable, urlsearch, values) {
 			<style> @import url("https://fonts.googleapis.com/css2?family=Roboto&display=swap"); </style>'
 		var bdy = document.createElement('body');
 		bdy.appendChild(tbl);
+		bdy.appendChild(summaryText);
 		newWindow.document.body = bdy;
 		openPaginationPage(urlsearch);
 	}, false);
