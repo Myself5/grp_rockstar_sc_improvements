@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		7.4.1
+// @version		7.5.0
 // @description	Improve all kinds of ACP and SocialClub features
 // @author		Myself5
 // @updateURL	https://g.m5.cx/GRSI.user.js
@@ -74,7 +74,7 @@ const websiteACP = 'https://' + hostnameACP;
 const acpTable = 'acptable';
 const acpTableDummy = websiteACP + '/' + acpTable;
 const playerURLBase = websiteACP + "/" + location.pathname.split('/')[1] + '/account/info/'; // + ID
-const authorizationLogsBase = websiteACP + "/" + location.pathname.split('/')[1] + '/logs/authorization'; // + Search
+const authorizationLogsBase = websiteACP + "/" + location.pathname.split('/')[1] + '/logs/authorization?'; // + Search
 const pathAuthLogs = new RegExp('/admin_.*\/logs\/authorization');
 const pathMoneyLogs = new RegExp('/admin_.*\/logs\/money');
 const pathFractionLogs = new RegExp('/admin_.*\/logs\/fraction');
@@ -111,6 +111,7 @@ const authLogValues = {
 	compareIP: 'authLogSearchCompareIP',
 	levelSelector: '#header-navbar-collapse > ul > li.dropdown.dropdown-profile > a > span',
 	minimalIPLevel: 5,
+	initAuthHref: true,
 	mainTable: 'body > div.app-layout-canvas > div > main > div > div:nth-child(2) > div.card-block > table',
 	searchParams: {
 		default: 'skip',
@@ -799,6 +800,34 @@ function handleAuthLogSummary(urlsearch) {
 	openPaginationPage(urlsearch);
 }
 
+function getAuthCellContent(filterTable, selector, j, i) {
+	var content = filterTable[j][i];
+	var a = document.createElement('a');
+	a.innerHTML = content;
+	a.style.color = "rgb(85, 160, 200)";
+
+	// Start Processing by going to oldest Page
+	var urlsearch = new URLSearchParams(location.search);
+	urlsearch.set(authLogValues.searchParams.nick, authLogValues.searchParams.default);
+	urlsearch.set(authLogValues.searchParams.ip, authLogValues.searchParams.default);
+	urlsearch.set(authLogValues.searchParams.page, authLogValues.initialSearchPage);
+	urlsearch.set(authLogValues.active, "true");
+	urlsearch.set(authLogValues.initialPageCheck, "true");
+	urlsearch.set(authLogValues.compareIP, false);
+
+	if (selector == authLogValues.tblSelectors.id) {
+		urlsearch.set(authLogValues.searchParams.id, content);
+		urlsearch.set(authLogValues.searchParams.sc, authLogValues.searchParams.default);
+	} else if (selector == authLogValues.tblSelectors.sc) {
+		urlsearch.set(authLogValues.searchParams.id, authLogValues.searchParams.default);
+		urlsearch.set(authLogValues.searchParams.sc, content);
+	}
+
+	a.href = authorizationLogsBase + urlsearch.toString();
+
+	return a;
+}
+
 function openFilterTable(filterTable, urlsearch, values) {
 	var tbl = document.createElement('table'),
 		header = tbl.createTHead();
@@ -830,7 +859,13 @@ function openFilterTable(filterTable, urlsearch, values) {
 				a.style.color = "rgb(85, 160, 200)";
 				cell.appendChild(a);
 			} else {
-				cell.innerHTML = filterTable[j][i];
+				if (values.initAuthHref && j == values.tblSelectors.id) {
+					cell.appendChild(getAuthCellContent(filterTable, values.tblSelectors.id, j, i));
+				} else if (values.initAuthHref && j == values.tblSelectors.sc) {
+					cell.appendChild(getAuthCellContent(filterTable, values.tblSelectors.sc, j, i));
+				} else {
+					cell.innerHTML = filterTable[j][i];
+				}
 			}
 			cell.style.border = '1px solid #ddd';
 			cell.style.padding = "10px";
@@ -1906,7 +1941,7 @@ function initPunishmentLogs() {
 		urlsearch.set(authLogValues.searchParams.id, idTbl[i]);
 		urlsearch.set(authLogValues.searchParams.ip, authLogValues.searchParams.default);
 		urlsearch.set(authLogValues.searchParams.sc, authLogValues.searchParams.default);
-		var url = authorizationLogsBase + "?" + urlsearch.toString();
+		var url = authorizationLogsBase + urlsearch.toString();
 		idtdTbl[i].innerHTML = "<a style='color: rgb(85, 160, 200)' href=" + url + " target='_blank'>" + idTbl[i] + "</a>";
 	}
 }
