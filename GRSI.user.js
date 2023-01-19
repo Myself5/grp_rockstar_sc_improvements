@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		7.4.0
+// @version		7.4.1
 // @description	Improve all kinds of ACP and SocialClub features
 // @author		Myself5
 // @updateURL	https://g.m5.cx/GRSI.user.js
@@ -693,7 +693,7 @@ function handleFractionSearchEntry(urlsearch) {
 
 		if (page == endPage) {
 			urlsearch.delete(fractionSearchValues.active);
-			openFilterTable(filterTable, urlsearch, fractionSearchValues.tblSelectors.id);
+			openFilterTable(filterTable, urlsearch, fractionSearchValues);
 			GM_deleteValue(fractionSearchValues.tblGMPrefix + playerID + "_" + qtty);
 			return;
 		}
@@ -777,7 +777,7 @@ function handleAuthLogSummary(urlsearch) {
 		}
 
 		urlsearch.delete(authLogValues.active);
-		openFilterTable(filterTable, urlsearch, authLogValues.tblSelectors.id);
+		openFilterTable(filterTable, urlsearch, authLogValues);
 		GM_deleteValue(
 			authLogValues.tblGMPrefix
 			+ nickname + "_"
@@ -799,7 +799,7 @@ function handleAuthLogSummary(urlsearch) {
 	openPaginationPage(urlsearch);
 }
 
-function openFilterTable(filterTable, urlsearch, idfield) {
+function openFilterTable(filterTable, urlsearch, values) {
 	var tbl = document.createElement('table'),
 		header = tbl.createTHead();
 	tbl.width = "90%";
@@ -823,11 +823,10 @@ function openFilterTable(filterTable, urlsearch, idfield) {
 		const tr = tbl.insertRow();
 		for (let j = 0; j < filterTable.length; j++) {
 			var cell = tr.insertCell();
-			if (j == idfield) {
+			if (j == values.tblSelectors.nick) {
 				var a = document.createElement('a');
-				var id = filterTable[j][i];
-				a.href = playerURLBase + id;
-				a.innerHTML = id;
+				a.href = playerURLBase + filterTable[values.tblSelectors.id][i];
+				a.innerHTML = filterTable[j][i];
 				a.style.color = "rgb(85, 160, 200)";
 				cell.appendChild(a);
 			} else {
@@ -888,13 +887,13 @@ function sortTable(table, n) {
 			/* Check if the two rows should switch place,
 			based on the direction, asc or desc: */
 			if (dir == "asc") {
-				if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
+				if (x.textContent.toLowerCase() > y.textContent.toLowerCase()) {
 					// If so, mark as a switch and break the loop:
 					shouldSwitch = true;
 					break;
 				}
 			} else if (dir == "desc") {
-				if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
+				if (x.textContent.toLowerCase() < y.textContent.toLowerCase()) {
 					// If so, mark as a switch and break the loop:
 					shouldSwitch = true;
 					break;
