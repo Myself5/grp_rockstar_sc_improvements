@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		7.6.1
+// @version		7.7.0
 // @description	Improve all kinds of ACP and SocialClub features
 // @author		Myself5
 // @updateURL	https://g.m5.cx/GRSI.user.js
@@ -156,6 +156,8 @@ const fractionSearchValues = {
 		additionalInfo: 4,
 		rank: 5,
 		date: 6,
+		firstpage: 0,
+		loginAmount: 0,
 	},
 	tblDefault: '[[],[],[],[],[],[],[]]',
 	tblGMPrefix: 'ACPFractionFilterPrefix_',
@@ -703,12 +705,12 @@ function handleFractionSearchEntry(urlsearch) {
 	}
 }
 
-function objTableContains(objTable, entry, compareIP) {
+function GetFromobjTable(objTable, entry, compareIP) {
 	for (var i = 0; i < objTable.length; i++) {
 		if (objTable[i].id === entry.id
 			&& (!compareIP || (compareIP && objTable[i].ip === entry.ip))
 			&& objTable[i].sc === entry.sc) {
-			return true;
+			return objTable[i];
 		}
 	}
 	return false;
@@ -754,9 +756,14 @@ function handleAuthLogSummary(urlsearch) {
 		entry.id = table.rows.item(i).cells.item(authLogValues.tblSelectors.id).textContent;
 		entry.ip = table.rows.item(i).cells.item(authLogValues.tblSelectors.ip).textContent;
 		entry.sc = table.rows.item(i).cells.item(authLogValues.tblSelectors.sc).textContent;
-		entry.date = table.rows.item(i).cells.item(authLogValues.tblSelectors.date).textContent + " (Page: " + page + ")";
+		entry.date = table.rows.item(i).cells.item(authLogValues.tblSelectors.date).textContent;
+		entry.firstpage = page;
+		entry.loginAmount = 1;
 
-		if (!objTableContains(objectTable, entry, compareIP)) {
+		const tblContent = GetFromobjTable(objectTable, entry, compareIP);
+		if (tblContent) {
+			tblContent.loginAmount += 1;
+		} else {
 			objectTable.push(entry);
 		}
 	}
@@ -774,7 +781,9 @@ function handleAuthLogSummary(urlsearch) {
 			filterTable[authLogValues.tblSelectors.id].push(objectTable[i].id);
 			filterTable[authLogValues.tblSelectors.ip].push(objectTable[i].ip);
 			filterTable[authLogValues.tblSelectors.sc].push(objectTable[i].sc);
-			filterTable[authLogValues.tblSelectors.date].push(objectTable[i].date);
+			filterTable[authLogValues.tblSelectors.date].push(
+				objectTable[i].date
+				+ " (First Login Page: " + objectTable[i].firstpage + " Total Logins: " + objectTable[i].loginAmount + ")");
 		}
 
 		urlsearch.delete(authLogValues.active);
