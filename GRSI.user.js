@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		7.7.0
+// @version		7.8.0
 // @description	Improve all kinds of ACP and SocialClub features
 // @author		Myself5
 // @updateURL	https://g.m5.cx/GRSI.user.js
@@ -77,6 +77,7 @@ const playerURLBase = websiteACP + "/" + location.pathname.split('/')[1] + '/acc
 const authorizationLogsBase = websiteACP + "/" + location.pathname.split('/')[1] + '/logs/authorization?'; // + Search
 const pathAuthLogs = new RegExp('/admin_.*\/logs\/authorization');
 const pathMoneyLogs = new RegExp('/admin_.*\/logs\/money');
+const pathInventoryLogs = new RegExp('/admin_.*\/logs\/inventory');
 const pathFractionLogs = new RegExp('/admin_.*\/logs\/fraction');
 const pathPlayerSearch = new RegExp('/admin_.*\/account\/search');
 const punishmentSearch = new RegExp('/admin_.*\/punishmen\/');
@@ -130,7 +131,38 @@ const moneyLogSelectors = {
 	datetable: 'body > div.app-layout-canvas > div > main > div > div:nth-child(2) > div > table > tbody > tr > td:nth-child(2)',
 	qttytable: 'body > div.app-layout-canvas > div > main > div > div:nth-child(2) > div > table > tbody > tr > td:nth-child(4)',
 	type: _selectorTypes.money,
+	searchDefault: 'skip',
+	oppositeBase: websiteACP + "/" + location.pathname.split('/')[1] + '/logs/inventory?', // + Search
+	searchParams: {
+		nick: 'nick',
+		itemID: 'id_item',
+		id: 'accid',
+		action: 'action',
+		ip: 'ip',
+	},
+	inputFieldIDs: {
+		nick: 'nick',
+		id: 'number-account',
+		ip: 'ip',
+	},
 };
+
+const inventoryLogSelectors = {
+	datetable: 'body > div.app-layout-canvas > div > main > div > div:nth-child(2) > div > table > tbody > tr > td:nth-child(8)',
+	searchDefault: 'skip',
+	oppositeBase: websiteACP + "/" + location.pathname.split('/')[1] + '/logs/money?', // + Search
+	searchParams: {
+		nick: 'nick',
+		id: 'accid',
+		ip: 'ip',
+		description: 'description',
+	},
+	inputFieldIDs: {
+		nick: 'nick',
+		id: 'accid',
+		ip: 'ip',
+	},
+}
 
 const playerSearchSelectors = {
 	count: '#result_count',
@@ -1855,7 +1887,7 @@ function processDatesFromPage(x) {
 	return 1;
 }
 
-function findInitialRange(urlsearch) {
+function getInitialRangeSearch(urlsearch) {
 	if (urlsearch == null) {
 		urlsearch = new URLSearchParams(location.search);
 	}
@@ -1864,7 +1896,7 @@ function findInitialRange(urlsearch) {
 	var l = parseInt(urlsearch.get(binarySearchValues.l));
 	var r = parseInt(urlsearch.get(binarySearchValues.r));
 	if (isNaN(l) || isNaN(r)) {
-		l = 0;
+		l = 1;
 		r = binarySearchValues.initialSteps;
 		urlsearch.set(binarySearchValues.l, l);
 		urlsearch.set(binarySearchValues.r, r);
@@ -1897,7 +1929,7 @@ function findInitialRange(urlsearch) {
 				break;
 		}
 	}
-	openPaginationPage(urlsearch);
+	return urlsearch;
 }
 
 function binarySearch(urlsearch) {
@@ -1976,7 +2008,7 @@ function injectPageChooser() {
 					urlsearch.delete(binarySearchValues.r);
 					urlsearch.delete(binarySearchValues.active);
 					urlsearch.delete(binarySearchValues.initialRangeFound);
-					findInitialRange(urlsearch);
+					openPaginationPage(getInitialRangeSearch(urlsearch));
 				}
 			}
 		});
@@ -2013,6 +2045,40 @@ function initPunishmentLogs() {
 	}
 }
 
+function initClickableDate(selectors) {
+	// Somehow get the date column and init hrefs
+	const dateColumn = $(selectors.datetable);
+	const dateColumnText = getTableValues(dateColumn);
+	const searchDate = new URLSearchParams(location.search).get(binarySearchValues.search);
+	for (var i = 0; i < dateColumn.length; i++) {
+		var urlsearch = new URLSearchParams();
+		const nickFieldValue = document.getElementById(selectors.inputFieldIDs.nick).value;
+		const idFieldValue = document.getElementById(selectors.inputFieldIDs.id).value;
+		const ipFieldValue = document.getElementById(selectors.inputFieldIDs.ip).value;
+		for (const [key, entry] of Object.entries(selectors.searchParams)) {
+			urlsearch.set(entry, selectors.searchDefault);
+		}
+		if (nickFieldValue) {
+			urlsearch.set(selectors.searchParams.nick, nickFieldValue);
+		}
+		if (idFieldValue) {
+			urlsearch.set(selectors.searchParams.id, idFieldValue);
+		}
+		if (ipFieldValue) {
+			urlsearch.set(selectors.searchParams.ip, ipFieldValue);
+		}
+		urlsearch.set(binarySearchValues.search, dateColumnText[i]);
+		var href = selectors.oppositeBase + getInitialRangeSearch(urlsearch).toString();
+		var datecolor = "rgb(85, 160, 200)";
+		if (dateColumnText[i] == searchDate) {
+			datecolor = "rgb(0, 255, 0)";
+			dateColumn[i].scrollIntoView({ behavior: 'smooth', block: 'center' });
+		}
+		dateColumn[i].innerHTML = "<a style='color: " + datecolor + ";' href='" + href + "' target='_blank'>"
+			+ dateColumnText[i] + "</a>";
+	}
+}
+
 window.addEventListener('load', function () {
 
 	if (location.hostname === hostnameACP) {
@@ -2022,7 +2088,7 @@ window.addEventListener('load', function () {
 		}
 		var searchparams = new URLSearchParams(location.search);
 		if (searchparams.get(binarySearchValues.active) == 'true') {
-			findInitialRange();
+			openPaginationPage(getInitialRangeSearch());
 			return;
 		}
 		if (searchparams.get(fractionSearchValues.active) == 'true') {
@@ -2040,7 +2106,11 @@ window.addEventListener('load', function () {
 			initSearchButton(authLogValues, false);
 		}
 		if (pathMoneyLogs.test(location.pathname)) {
+			initClickableDate(moneyLogSelectors);
 			initSearchButton(moneyLogSelectors, false);
+		}
+		if (pathInventoryLogs.test(location.pathname)) {
+			initClickableDate(inventoryLogSelectors);
 		}
 		if (pathFractionLogs.test(location.pathname)) {
 			initFractionPage();
