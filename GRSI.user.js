@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		7.8.0
+// @version		7.8.1
 // @description	Improve all kinds of ACP and SocialClub features
 // @author		Myself5
 // @updateURL	https://g.m5.cx/GRSI.user.js
@@ -188,8 +188,6 @@ const fractionSearchValues = {
 		additionalInfo: 4,
 		rank: 5,
 		date: 6,
-		firstpage: 0,
-		loginAmount: 0,
 	},
 	tblDefault: '[[],[],[],[],[],[],[]]',
 	tblGMPrefix: 'ACPFractionFilterPrefix_',
