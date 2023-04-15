@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		7.8.2
+// @version		7.9.0
 // @description	Improve all kinds of ACP and SocialClub features
 // @author		Myself5
 // @updateURL	https://g.m5.cx/GRSI.user.js
@@ -30,6 +30,10 @@ const optionsDefaultValues = {
 };
 
 const gmStorageMaps = {
+	colorOptions: {
+		id: 'colorOptions',
+		map: getMapFromStorage('colorOptions'),
+	},
 	configOptions: {
 		id: 'configOptions',
 		map: getMapFromStorage('configOptions'),
@@ -310,6 +314,39 @@ var scContextCSSArray =
 	background: #343434;\
 }"
 	];
+
+
+const default_colors = {
+	blue: "rgb(85, 160, 200)",
+	green: "rgb(0, 255, 0)",
+	red: "rgb(255, 0, 0)",
+	yellow: "rgb(255,255,0)",
+}
+
+const colorstorage = {
+	green:
+	{
+		value: gmStorageMaps.colorOptions.map.has('green') ? gmStorageMaps.colorOptions.map.get('green') : default_colors.green,
+		desc: "the green color, used for valid Social Clubs"
+	},
+	red:
+	{
+		value: gmStorageMaps.colorOptions.map.has('red') ? gmStorageMaps.colorOptions.map.get('red') : default_colors.red,
+		desc: "the red color, used for invalid Social Clubs"
+	},
+	yellow:
+	{
+		value: gmStorageMaps.colorOptions.map.has('yellow') ? gmStorageMaps.colorOptions.map.get('yellow') : default_colors.yellow,
+		desc: "the yellow color, used in Cheater and PC Check Target Tags"
+	},
+}
+
+const colors = {
+	blue: default_colors.blue,
+	green: colorstorage.green.value,
+	red: colorstorage.red.value,
+	yellow: colorstorage.yellow.value,
+}
 
 // RS Variables
 const hostnameRS = 'socialclub.rockstargames.com';
@@ -843,7 +880,7 @@ function getAuthCellContent(filterTable, selector, j, i) {
 	var content = filterTable[j][i];
 	var a = document.createElement('a');
 	a.innerHTML = content;
-	a.style.color = "rgb(85, 160, 200)";
+	a.style.color = colors.blue;
 
 	// Start Processing by going to oldest Page
 	var urlsearch = new URLSearchParams(location.search);
@@ -918,7 +955,7 @@ function openFilterTable(filterTable, urlsearch, values, textsummary) {
 				var a = document.createElement('a');
 				a.href = playerURLBase + rowID;
 				a.innerHTML = filterTable[j][i];
-				a.style.color = "rgb(85, 160, 200)";
+				a.style.color = colors.blue;
 				cell.appendChild(a);
 			} else {
 				if (values.initAuthHref && j == values.tblSelectors.id) {
@@ -1153,7 +1190,7 @@ function redrawSCButtons(sc_fields, sc_names) {
 	var sc_buttons = [];
 	for (var i = 0; i < sc_fields.length; i++) {
 		if (sc_names[i].length != 0) {
-			var fontcolor = "rgb(85, 160, 200)";
+			var fontcolor = colors.blue;
 			var scObj = getSCObj(sc_names[i]);
 			var pcCheckTarget = scObj.pccheck;
 			var knownCheater = scObj.cheater;
@@ -1161,9 +1198,9 @@ function redrawSCButtons(sc_fields, sc_names) {
 			const scValid = scObj.valid;
 			var scValidityChecked = scValid != undefined;
 			if (scValidityChecked) {
-				fontcolor = scValid ? "rgb(0, 255, 0)" : "rgb(255, 0, 0)";
+				fontcolor = scValid ? colors.green : colors.red;
 			}
-			sc_fields[i].innerHTML = "<a style='color: rgb(255,255,0);'>"
+			sc_fields[i].innerHTML = "<a style='color: " + colors.yellow + ";'>"
 				+ (pcCheckTarget ? pccheckTag : "")
 				+ (knownCheater ? cheaterTag : "")
 				+ "</a><a style='color: " + fontcolor + ";' href='" + SCbaseURLMembers + sc_names[i] + "/" + ((autoProcess.value && closeAfterProcess.value) ? closeAfterProcessLocationSearch : "") + "' target='_blank'>"
@@ -1317,7 +1354,7 @@ function redrawMoneyFields(tables) {
 	for (var i = 0; i < tables.qtty.length; i++) {
 		var fontcolor = "";
 		if (!isNaN(tables.qttyValue[i].value) && tables.qttyValue[i].value > moneyMaxValue) {
-			fontcolor = "rgb(255, 0, 0)";
+			fontcolor = colors.red;
 		}
 		tables.qtty[i].style.color = fontcolor;
 	}
@@ -1476,7 +1513,7 @@ function openDailyTotalTable(moneyData) {
 			}
 			var fontcolor = "";
 			if (totalTdy.incoming > moneyMaxValue || totalTdy.outgoing > moneyMaxValue) {
-				fontcolor = "rgb(255, 0, 0)";
+				fontcolor = colors.red;
 			}
 			td.innerHTML = "<a style='color: " + fontcolor + ";'>Incoming: $" + totalTdy.incoming + "<br> Outgoing: $" + totalTdy.outgoing + "</a>";
 		}
@@ -1799,6 +1836,20 @@ function injectDropDown() {
 		}
 		window.alert("All PC Check Targets set successfully");
 	}
+	const colorpicker = document.createElement('a');
+	colorpicker.innerHTML = "Choose Highlighting Colors";
+	colorpicker.id = "color_prompt";
+	colorpicker.onclick = async function () {
+		for (const [color, content] of Object.entries(colorstorage)) {
+		  
+		var newColor = window.prompt("Enter new Color Tag for\n"
+		+ content.desc + "\n"
+		+ "Default: " + default_colors[color] + " Current: " + colors[color]);
+		gmStorageMaps.colorOptions.map.set(color, newColor);
+	}
+	saveMapToStorage(gmStorageMaps.colorOptions);
+		window.alert("All Colors set successfully");
+	}
 	const version = document.createElement('a');
 	version.innerHTML = "GRSI Version: " + GM_info.script.version;
 	version.id = "grsi_version";
@@ -1820,6 +1871,7 @@ function injectDropDown() {
 	}
 	li.appendChild(cheaterentry);
 	li.appendChild(pccheckentry);
+	li.appendChild(colorpicker);
 	li.appendChild(version);
 }
 
@@ -2045,7 +2097,7 @@ function initPunishmentLogs() {
 		urlsearch.set(authLogValues.searchParams.ip, authLogValues.searchParams.default);
 		urlsearch.set(authLogValues.searchParams.sc, authLogValues.searchParams.default);
 		var url = authorizationLogsBase + urlsearch.toString();
-		idtdTbl[i].innerHTML = "<a style='color: rgb(85, 160, 200)' href=" + url + " target='_blank'>" + idTbl[i] + "</a>";
+		idtdTbl[i].innerHTML = "<a style='color: " + colors.blue + "' href=" + url + " target='_blank'>" + idTbl[i] + "</a>";
 	}
 }
 
@@ -2073,9 +2125,9 @@ function initClickableDate(selectors) {
 		}
 		urlsearch.set(binarySearchValues.search, dateColumnText[i]);
 		var href = selectors.oppositeBase + getInitialRangeSearch(urlsearch).toString();
-		var datecolor = "rgb(85, 160, 200)";
+		var datecolor = colors.blue;
 		if (dateColumnText[i] == searchDate) {
-			datecolor = "rgb(0, 255, 0)";
+			datecolor = colors.green;
 			dateColumn[i].scrollIntoView({ behavior: 'smooth', block: 'center' });
 		}
 		dateColumn[i].innerHTML = "<a style='color: " + datecolor + ";' href='" + href + "' target='_blank'>"
