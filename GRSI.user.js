@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		7.8.1
+// @version		7.8.2
 // @description	Improve all kinds of ACP and SocialClub features
 // @author		Myself5
 // @updateURL	https://g.m5.cx/GRSI.user.js
@@ -1763,8 +1763,11 @@ function injectDropDown() {
 	cheaterentry.innerHTML = "Enter Cheaters";
 	cheaterentry.id = "cheater_prompt";
 	cheaterentry.onclick = function () {
-		var names = window.prompt("Enter Cheater List\n"
-			+ "(Make sure they are from a table and each name is on a new line)").split('\r\n');
+		var namestring = window.prompt("Enter Cheater List\n"
+			+ "(Make sure they are from a table and each name is on a new line)");
+		var namesnl = namestring.split('\r\n');
+		var namesspace = namestring.split(' ');
+		var names = (namesnl.length > namesspace.length) ? namesnl : namesspace;
 		for (var i = 0; i < names.length; i++) {
 			if (names[i].length > 0) {
 				submitSCResult(names[i], scValueTypes.cheater, true);
@@ -1776,8 +1779,11 @@ function injectDropDown() {
 	pccheckentry.innerHTML = "Enter PC Check Targets";
 	pccheckentry.id = "cheater_prompt";
 	pccheckentry.onclick = async function () {
-		var names = window.prompt("Enter PC Check List\n"
-			+ "(Make sure they are from a table and each name is on a new line)").split('\r\n');
+		var namestring = window.prompt("Enter PC Check List\n"
+			+ "(Make sure they are from a table and each name is on a new line)");
+		var namesnl = namestring.split('\r\n');
+		var namesspace = namestring.split(' ');
+		var names = (namesnl.length > namesspace.length) ? namesnl : namesspace;
 		var scToBeUpdatedEntries = await GM.listValues();
 		for (let i = 0; i < scToBeUpdatedEntries.length; i++) {
 			if (scToBeUpdatedEntries[i].startsWith(scStorageIdentifier)) {
