@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		7.8.1
+// @version		7.9.0_Mobile
 // @description	Improve all kinds of ACP and SocialClub features
 // @author		Myself5
 // @updateURL	https://g.m5.cx/GRSI.user.js
@@ -82,6 +82,8 @@ const pathFractionLogs = new RegExp('/admin_.*\/logs\/fraction');
 const pathPlayerSearch = new RegExp('/admin_.*\/account\/search');
 const punishmentSearch = new RegExp('/admin_.*\/punishmen\/');
 const moneyMaxValue = 5000000;
+const dummyTableMaxOpeningAttempts = 100;
+const dummyTableOpeningTimeout = 1000;
 
 const _selectorTypes = {
 	socialclub: 0,
@@ -965,19 +967,29 @@ function openFilterTable(filterTable, urlsearch, values, textsummary) {
 		summaryText.innerHTML = text;
 	}
 
-	var newWindow = window.open(acpTableDummy);
-	newWindow.addEventListener('load', function () {
-		newWindow.document.head.innerHTML =
-			'<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">\
-			<style> @import url("https://fonts.googleapis.com/css2?family=Roboto&display=swap"); </style>'
-		var bdy = document.createElement('body');
-		bdy.appendChild(tbl);
-		if (textsummary) {
-			bdy.appendChild(summaryText);
+	var attempts = 0;
+
+	var checkExist = setInterval(async function () {
+		var newWindow = window.open(acpTableDummy, "filterTableTab");
+		if (attempts++ > dummyTableMaxOpeningAttempts) {
+			console.log("Waited too long, aborting attempt to open table tab");
+			clearInterval(checkExist);
 		}
-		newWindow.document.body = bdy;
-		openPaginationPage(urlsearch);
-	}, false);
+		if (newWindow !== null) {
+			clearInterval(checkExist);
+			await new Promise(resolve => setTimeout(resolve, dummyTableOpeningTimeout));
+			newWindow.document.head.innerHTML =
+				'<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">\
+					<style> @import url("https://fonts.googleapis.com/css2?family=Roboto&display=swap"); </style>'
+			var bdy = document.createElement('body');
+			bdy.appendChild(tbl);
+			if (textsummary) {
+				bdy.appendChild(summaryText);
+			}
+			newWindow.document.body = bdy;
+			openPaginationPage(urlsearch);
+		}
+	}, 200); // check every 200ms
 }
 
 function InitACPTableSortable() {
@@ -1481,15 +1493,26 @@ function openDailyTotalTable(moneyData) {
 			td.innerHTML = "<a style='color: " + fontcolor + ";'>Incoming: $" + totalTdy.incoming + "<br> Outgoing: $" + totalTdy.outgoing + "</a>";
 		}
 	})
-	var newWindow = window.open(acpTableDummy);
-	newWindow.addEventListener('load', function () {
-		newWindow.document.head.innerHTML =
-			'<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">\
-			<style> @import url("https://fonts.googleapis.com/css2?family=Roboto&display=swap"); </style>'
-		var bdy = document.createElement('body');
-		bdy.appendChild(tbl);
-		newWindow.document.body = bdy;
-	}, false);
+
+	var attempts = 0;
+
+	var checkExist = setInterval(async function () {
+		var newWindow = window.open(acpTableDummy, "dailyTotalTableTab");
+		if (attempts++ > dummyTableMaxOpeningAttempts) {
+			console.log("Waited too long, aborting attempt to open table tab");
+			clearInterval(checkExist);
+		}
+		if (newWindow !== null) {
+			clearInterval(checkExist);
+			await new Promise(resolve => setTimeout(resolve, dummyTableOpeningTimeout));
+			newWindow.document.head.innerHTML =
+				'<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">\
+					<style> @import url("https://fonts.googleapis.com/css2?family=Roboto&display=swap"); </style>'
+			var bdy = document.createElement('body');
+			bdy.appendChild(tbl);
+			newWindow.document.body = bdy;
+		}
+	}, 200); // check every 200ms
 }
 
 function getSCObj(name) {
@@ -1763,8 +1786,11 @@ function injectDropDown() {
 	cheaterentry.innerHTML = "Enter Cheaters";
 	cheaterentry.id = "cheater_prompt";
 	cheaterentry.onclick = function () {
-		var names = window.prompt("Enter Cheater List\n"
-			+ "(Make sure they are from a table and each name is on a new line)").split('\r\n');
+		var namestring = window.prompt("Enter Cheater List\n"
+			+ "(Make sure they are from a table and each name is on a new line)");
+		var namesnl = namestring.split('\r\n');
+		var namesspace = namestring.split(' ');
+		var names = (namesnl.length > namesspace.length) ? namesnl : namesspace;
 		for (var i = 0; i < names.length; i++) {
 			if (names[i].length > 0) {
 				submitSCResult(names[i], scValueTypes.cheater, true);
@@ -1776,8 +1802,11 @@ function injectDropDown() {
 	pccheckentry.innerHTML = "Enter PC Check Targets";
 	pccheckentry.id = "cheater_prompt";
 	pccheckentry.onclick = async function () {
-		var names = window.prompt("Enter PC Check List\n"
-			+ "(Make sure they are from a table and each name is on a new line)").split('\r\n');
+		var namestring = window.prompt("Enter PC Check List\n"
+			+ "(Make sure they are from a table and each name is on a new line)");
+		var namesnl = namestring.split('\r\n');
+		var namesspace = namestring.split(' ');
+		var names = (namesnl.length > namesspace.length) ? namesnl : namesspace;
 		var scToBeUpdatedEntries = await GM.listValues();
 		for (let i = 0; i < scToBeUpdatedEntries.length; i++) {
 			if (scToBeUpdatedEntries[i].startsWith(scStorageIdentifier)) {
