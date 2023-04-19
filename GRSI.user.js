@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		7.9.6
+// @version		7.9.7
 // @description	Improve all kinds of ACP and SocialClub features
 // @author		Myself5
 // @updateURL	https://g.m5.cx/GRSI.user.js
@@ -1940,6 +1940,33 @@ function injectDropDown() {
 		await new Promise(resolve => setTimeout(resolve, 500));
 		window.alert("All SCIDs copied to clipboard successfully");
 	}
+	const importaccandidlist = document.createElement('a');
+	importaccandidlist.innerHTML = "Import Social Club ID List";
+	importaccandidlist.id = "import_scid";
+	importaccandidlist.onclick = async function () {
+		var namestring = window.prompt("Enter SocialClub Name and SCID List\n"
+			+ "(Make sure they are from a table and each | Name | ID | entry is on a new line)");
+		var namesnl = namestring.split('\r\n');
+		var namesspace = namestring.split(' ');
+		var names = (namesnl.length > namesspace.length) ? namesnl : namesspace;
+		var scIDs = "";
+		for (var i = 0; i < names.length; i++) {
+			var row = names[i].split('\t');
+			var name = row[0];
+			var scid = row[1];
+			if (name) {
+				if (isNaN(row[1])) {
+					if (row[1] === "N/A") {
+						submitSCResult(name, scValueTypes.valid, false);
+					}
+				} else {
+					submitSCResult(name, scValueTypes.valid, true);
+					submitSCResult(name, scValueTypes.scid, scid);
+				}
+			}
+		}
+		window.alert("All SCIDs imported successfully");
+	}
 	li.appendChild(cheaterentry);
 	li.appendChild(clearcheaters);
 	li.appendChild(pccheckentry);
@@ -1947,6 +1974,7 @@ function injectDropDown() {
 	li.appendChild(version);
 	li.appendChild(cheaterscid);
 	li.appendChild(getscids);
+	li.appendChild(importaccandidlist);
 }
 
 function injectScrollToTop() {
