@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		7.9.0
+// @version		7.9.3
 // @description	Improve all kinds of ACP and SocialClub features
 // @author		Myself5
 // @updateURL	https://g.m5.cx/GRSI.user.js
@@ -1186,6 +1186,12 @@ function bgCheckSC(sc_name) {
 	window.focus();
 }
 
+function bgCheckSCInTab(sc_name) {
+	var url = SCbaseURLMembers + sc_name + "/" + closeAfterProcessLocationSearch;
+	var win = window.open(url, sc_name);
+	window.focus();
+}
+
 function redrawSCButtons(sc_fields, sc_names) {
 	var sc_buttons = [];
 	for (var i = 0; i < sc_fields.length; i++) {
@@ -1544,6 +1550,11 @@ function submitSCResult(name, type, value) {
 		switch (type) {
 			case scValueTypes.valid:
 				nameObj.valid = value;
+				if (!value) {
+					if (!nameObj.scid) {
+						nameObj.scid = "N/A";
+					}
+				}
 				break;
 			case scValueTypes.cheater:
 				nameObj.cheater = value;
@@ -1791,6 +1802,10 @@ function processRSPlayerCards(playerCards) {
 	}
 	if (autoProcess.value) {
 		submitSCResult(searched_acc.name, scValueTypes.valid, searched_acc.exists);
+		// Invalid Account: Close Tab. Valid Account: Close Tab after processing scid
+		if (closeAfterProcess.activeTab && !searched_acc.exists) {
+			window.close();
+		}
 	}
 }
 
@@ -1811,6 +1826,24 @@ function injectDropDown() {
 			}
 		}
 		window.alert("All Cheaters imported successfully");
+	}
+	const clearcheaters = document.createElement('a');
+	clearcheaters.innerHTML = "Clear Cheater List";
+	clearcheaters.id = "clear_cheater_prompt";
+	clearcheaters.onclick = async function () {
+		if (confirm(("Do you really want to clear your local Cheater list?\n"
+			+ "This will remove the cheater tag, but keep other information (valid, scid etc) untouched\n"
+			+ "Press OK to continue."))) {
+			var scToBeUpdatedEntries = await GM.listValues();
+			for (let i = 0; i < scToBeUpdatedEntries.length; i++) {
+				if (scToBeUpdatedEntries[i].startsWith(scStorageIdentifier)) {
+					var nameObj = JSON.parse(GM_getValue(scToBeUpdatedEntries[i], "{}"));
+					delete nameObj.cheater;
+					GM_setValue(scToBeUpdatedEntries[i], JSON.stringify(nameObj));
+				}
+			}
+			window.alert("All Cheaters cleared successfully");
+		}
 	}
 	const pccheckentry = document.createElement('a');
 	pccheckentry.innerHTML = "Enter PC Check Targets";
@@ -1841,13 +1874,13 @@ function injectDropDown() {
 	colorpicker.id = "color_prompt";
 	colorpicker.onclick = async function () {
 		for (const [color, content] of Object.entries(colorstorage)) {
-		  
-		var newColor = window.prompt("Enter new Color Tag for\n"
-		+ content.desc + "\n"
-		+ "Default: " + default_colors[color] + " Current: " + colors[color]);
-		gmStorageMaps.colorOptions.map.set(color, newColor);
-	}
-	saveMapToStorage(gmStorageMaps.colorOptions);
+
+			var newColor = window.prompt("Enter new Color Tag for\n"
+				+ content.desc + "\n"
+				+ "Default: " + default_colors[color] + " Current: " + colors[color]);
+			gmStorageMaps.colorOptions.map.set(color, newColor);
+		}
+		saveMapToStorage(gmStorageMaps.colorOptions);
 		window.alert("All Colors set successfully");
 	}
 	const version = document.createElement('a');
@@ -1869,10 +1902,45 @@ function injectDropDown() {
 			}
 		}
 	}
+	const cheaterscid = document.createElement('a');
+	cheaterscid.innerHTML = "Fetch Cheater SCIDs";
+	cheaterscid.id = "cheater_scid";
+	cheaterscid.onclick = async function () {
+		var scToBeUpdatedEntries = await GM.listValues();
+		for (let i = 0; i < scToBeUpdatedEntries.length; i++) {
+			if (scToBeUpdatedEntries[i].startsWith(scStorageIdentifier)) {
+				var nameObj = JSON.parse(GM_getValue(scToBeUpdatedEntries[i], "{}"));
+				if (!nameObj.scid && nameObj.cheater) {
+					bgCheckSCInTab(scToBeUpdatedEntries[i].replace(scStorageIdentifier, ""));
+					await new Promise(resolve => setTimeout(resolve, 7500));
+				}
+			}
+		}
+	}
+	const getscids = document.createElement('a');
+	getscids.innerHTML = "Get SCID List";
+	getscids.id = "return_scid";
+	getscids.onclick = async function () {
+		var namestring = window.prompt("Enter SocialClub Name List\n"
+			+ "(Make sure they are from a table and each name is on a new line)");
+		var namesnl = namestring.split('\r\n');
+		var namesspace = namestring.split(' ');
+		var names = (namesnl.length > namesspace.length) ? namesnl : namesspace;
+		var scIDs = "";
+		for (var i = 0; i < names.length; i++) {
+			var nameObj = getSCObj(names[i]);
+			scIDs += (nameObj.scid ? nameObj.scid : "") + '\r\n';
+		}
+		navigator.clipboard.writeText(scIDs);
+		window.alert("All SCIDs copied to clipboard successfully");
+	}
 	li.appendChild(cheaterentry);
+	li.appendChild(clearcheaters);
 	li.appendChild(pccheckentry);
 	li.appendChild(colorpicker);
 	li.appendChild(version);
+	li.appendChild(cheaterscid);
+	li.appendChild(getscids);
 }
 
 function injectScrollToTop() {
