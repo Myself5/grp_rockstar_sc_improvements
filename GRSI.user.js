@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		7.9.5
+// @version		7.9.6
 // @description	Improve all kinds of ACP and SocialClub features
 // @author		Myself5
 // @updateURL	https://g.m5.cx/GRSI.user.js
@@ -1907,12 +1907,16 @@ function injectDropDown() {
 	cheaterscid.id = "cheater_scid";
 	cheaterscid.onclick = async function () {
 		var scToBeUpdatedEntries = await GM.listValues();
+		var totalChecks = 0;
 		for (let i = 0; i < scToBeUpdatedEntries.length; i++) {
 			if (scToBeUpdatedEntries[i].startsWith(scStorageIdentifier)) {
 				var nameObj = JSON.parse(GM_getValue(scToBeUpdatedEntries[i], "{}"));
 				if (!nameObj.scid && nameObj.cheater) {
 					bgCheckSCInTab(scToBeUpdatedEntries[i].replace(scStorageIdentifier, ""));
-					await new Promise(resolve => setTimeout(resolve, 7500));
+					await new Promise(resolve => setTimeout(resolve, 5000));
+					if (++totalChecks > 100) {
+						break;
+					}
 				}
 			}
 		}
