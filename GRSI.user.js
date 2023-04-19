@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		7.9.3
+// @version		7.9.5
 // @description	Improve all kinds of ACP and SocialClub features
 // @author		Myself5
 // @updateURL	https://g.m5.cx/GRSI.user.js
@@ -1931,7 +1931,9 @@ function injectDropDown() {
 			var nameObj = getSCObj(names[i]);
 			scIDs += (nameObj.scid ? nameObj.scid : "") + '\r\n';
 		}
-		navigator.clipboard.writeText(scIDs);
+		await new Promise(resolve => setTimeout(resolve, 500));
+		await navigator.clipboard.writeText(scIDs);
+		await new Promise(resolve => setTimeout(resolve, 500));
 		window.alert("All SCIDs copied to clipboard successfully");
 	}
 	li.appendChild(cheaterentry);
