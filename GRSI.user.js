@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		7.9.7
+// @version		7.9.8
 // @description	Improve all kinds of ACP and SocialClub features
 // @author		Myself5
 // @updateURL	https://g.m5.cx/GRSI.user.js
@@ -1580,7 +1580,7 @@ function ClearSCResult(name) {
 }
 
 function getSCNameFromURL() {
-	return window.location.pathname.split('/')[2];
+	return window.location.pathname.split('/')[2].replaceAll("%20", " ");
 }
 
 function updateCheckboxState(cb, value, cbAdj, valueAdj, valueAdjValue) {
