@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		7.9.8
+// @version		7.10.0
 // @description	Improve all kinds of ACP and SocialClub features
 // @author		Myself5
 // @updateURL	https://g.m5.cx/GRSI.user.js
@@ -27,6 +27,7 @@ const optionsDefaultValues = {
 	colorMatch: true,
 	showSCID: true,
 	showAllSCID: false,
+	funmodeActive: false,
 };
 
 const gmStorageMaps = {
@@ -112,6 +113,7 @@ const authLogValues = {
 	tblGMPrefix: 'ACPAuthLogFilterPrefix_',
 	paginationLastPage: '#DataTables_Table_0_paginate > ul > li > a.pagination-link',
 	active: 'authLogSearchActive',
+	storeLastSCforID: 'authLogStoreLastSCforIDActive',
 	initialPageCheck: 'authLogSearchInitialPageCheck',
 	compareIP: 'authLogSearchCompareIP',
 	levelSelector: '#header-navbar-collapse > ul > li.dropdown.dropdown-profile > a > span',
@@ -256,6 +258,7 @@ const cheaterTag = '⌊CHEATER⌋' + zeroWidthWhitespace;
 const pccheckTag = '⌊PC CHECK⌋' + zeroWidthWhitespace;
 
 const scStorageIdentifier = "SCStoragePrefix_";
+const idToSCStorageIdentifier = "IDToSCStoragePrefix_";
 
 const scContextMenu = {
 	check: {
@@ -347,6 +350,8 @@ const colors = {
 	red: colorstorage.red.value,
 	yellow: colorstorage.yellow.value,
 }
+
+var funmodeActive = gmStorageMaps.configOptions.map.has('funmodeActive') ? gmStorageMaps.configOptions.map.get('funmodeActive') : optionsDefaultValues.funmodeActive;
 
 // RS Variables
 const hostnameRS = 'socialclub.rockstargames.com';
@@ -1544,6 +1549,16 @@ function getSCObj(name) {
 	return nameObj;
 }
 
+function getSCObjforID(id) {
+	var sc = GM_getValue(idToSCStorageIdentifier + id, "");
+	var scObj = { name: "" };
+	if (sc) {
+		scObj = getSCObj(sc);
+		scObj.name = sc;
+	}
+	return scObj;
+}
+
 function submitSCResult(name, type, value) {
 	if (name != null && name.length > 2) {
 		var nameObj = getSCObj(name);
@@ -1809,6 +1824,31 @@ function processRSPlayerCards(playerCards) {
 	}
 }
 
+async function fetchSocialClubForIDList(ids) {
+	for (let i = 0; i < ids.length; i++) {
+		var urlsearch = new URLSearchParams();
+		urlsearch.set(authLogValues.searchParams.nick, authLogValues.searchParams.default);
+		urlsearch.set(authLogValues.searchParams.id, ids[i]);
+		urlsearch.set(authLogValues.searchParams.ip, authLogValues.searchParams.default);
+		urlsearch.set(authLogValues.searchParams.sc, authLogValues.searchParams.default);
+		urlsearch.set(authLogValues.storeLastSCforID, true);
+		var url = authorizationLogsBase + urlsearch.toString();
+		var win = window.open(url, ids[i]);
+		win.blur();
+		window.focus();
+		if (!funmodeActive) {
+			await new Promise(resolve => setTimeout(resolve, 1500));
+		}
+	}
+}
+
+function storeLastAuthSCforID(search) {
+	var lastSC = getTableValues($(authLogValues.table))[0];
+	var id = search.get(authLogValues.searchParams.id);
+	GM_setValue(idToSCStorageIdentifier + id, lastSC);
+	window.close();
+}
+
 function injectDropDown() {
 	const li = $('#header-navbar-collapse > ul > li.dropdown.dropdown-profile > ul > li')[0];
 	const cheaterentry = document.createElement('a');
@@ -1886,20 +1926,26 @@ function injectDropDown() {
 	const version = document.createElement('a');
 	version.innerHTML = "GRSI Version: " + GM_info.script.version;
 	version.id = "grsi_version";
-	version.onclick = async function () {
-		var toBeProcessed = 0;
-		var scToBeUpdatedEntries = await GM.listValues();
-		for (let i = 0; i < scToBeUpdatedEntries.length; i++) {
-			if (scToBeUpdatedEntries[i].startsWith(scStorageIdentifier)) {
-				var nameObj = JSON.parse(GM_getValue(scToBeUpdatedEntries[i], "{}"));
-				if (!nameObj.scid && nameObj.valid) {
-					bgCheckSC(scToBeUpdatedEntries[i].replace(scStorageIdentifier, ""));
-					await new Promise(resolve => setTimeout(resolve, 2500));
-					if (++toBeProcessed > 15) {
-						break;
-					}
+	var numberOfClicks = [];
+	version.onclick = function () {
+		// Funmode
+		if (numberOfClicks.length < 5) {
+			numberOfClicks.push(new Date().getTime());
+		} else {
+			var diff = numberOfClicks[numberOfClicks.length - 1] - numberOfClicks[0];
+			if (diff < 5000) {
+				funmodeActive = !funmodeActive;
+				gmStorageMaps.configOptions.map.set('funmodeActive', funmodeActive);
+				saveMapToStorage(gmStorageMaps.configOptions);
+				if (funmodeActive) {
+					alert("Funmode activated.");
+				} else {
+					alert("Funmode deactivated.");
 				}
+				numberOfClicks = [];
 			}
+			numberOfClicks.shift();
+			numberOfClicks.push(new Date().getTime());
 		}
 	}
 	const cheaterscid = document.createElement('a');
@@ -1942,8 +1988,7 @@ function injectDropDown() {
 	}
 	const importaccandidlist = document.createElement('a');
 	importaccandidlist.innerHTML = "Import Social Club ID List";
-	importaccandidlist.id = "import_scid";
-	importaccandidlist.onclick = async function () {
+	importaccandidlist.id = "import_scid"; importaccandidlist.onclick = async function () {
 		var namestring = window.prompt("Enter SocialClub Name and SCID List\n"
 			+ "(Make sure they are from a table and each | Name | ID | entry is on a new line)");
 		var namesnl = namestring.split('\r\n');
@@ -1967,14 +2012,68 @@ function injectDropDown() {
 		}
 		window.alert("All SCIDs imported successfully");
 	}
+	const fetchsocialclubforid = document.createElement('a');
+	fetchsocialclubforid.innerHTML = "Fetch SocialClubs for ID";
+	fetchsocialclubforid.id = "fetch_scid4id";
+	fetchsocialclubforid.onclick = async function () {
+		var idstring = window.prompt("Enter ID List\n"
+			+ "(Make sure they are from a table and each entry is on a new line)");
+		var idsnl = idstring.split('\r\n');
+		var idsspace = idstring.split(' ');
+		fetchSocialClubForIDList((idsnl.length > idsspace.length) ? idsnl : idsspace);
+		window.alert("Social Club fetch started successfully");
+	}
+	const getsocialclubforid = document.createElement('a');
+	getsocialclubforid.innerHTML = "Get SocialClubs for ID";
+	getsocialclubforid.id = "get_scid4id";
+	getsocialclubforid.onclick = async function () {
+		var idstring = window.prompt("Enter ID List\n"
+			+ "(Make sure they are from a table and each entry is on a new line)");
+		var idsnl = idstring.split('\r\n');
+		var idsspace = idstring.split(' ');
+		var scstring = "";
+		var ids = (idsnl.length > idsspace.length) ? idsnl : idsspace;
+		for (var i = 0; i < ids.length; i++) {
+			var scObj = getSCObjforID(ids[i]);
+			scstring += scObj.name + '\t' + (scObj.scid ? scObj.scid : "") + '\r\n';
+		}
+		await new Promise(resolve => setTimeout(resolve, 500));
+		await navigator.clipboard.writeText(scstring);
+		await new Promise(resolve => setTimeout(resolve, 500));
+		window.alert("All SocialClubs copied to clipboard successfully");
+	}
+	const fetchvalidscids = document.createElement('a');
+	fetchvalidscids.innerHTML = "Fetch valid SocialClub IDs";
+	fetchvalidscids.id = "fetch_valid_scids";
+	fetchvalidscids.onclick = async function () {
+		var toBeProcessed = 0;
+		var scToBeUpdatedEntries = await GM.listValues();
+		for (let i = 0; i < scToBeUpdatedEntries.length; i++) {
+			if (scToBeUpdatedEntries[i].startsWith(scStorageIdentifier)) {
+				var nameObj = JSON.parse(GM_getValue(scToBeUpdatedEntries[i], "{}"));
+				if (!nameObj.scid && nameObj.valid) {
+					bgCheckSC(scToBeUpdatedEntries[i].replace(scStorageIdentifier, ""));
+					await new Promise(resolve => setTimeout(resolve, 2500));
+					if (++toBeProcessed > 15) {
+						break;
+					}
+				}
+			}
+		}
+	}
 	li.appendChild(cheaterentry);
 	li.appendChild(clearcheaters);
 	li.appendChild(pccheckentry);
 	li.appendChild(colorpicker);
-	li.appendChild(version);
 	li.appendChild(cheaterscid);
 	li.appendChild(getscids);
 	li.appendChild(importaccandidlist);
+	li.appendChild(fetchsocialclubforid);
+	li.appendChild(getsocialclubforid);
+	if (funmodeActive) {
+		li.appendChild(fetchvalidscids);
+	}
+	li.appendChild(version);
 }
 
 function injectScrollToTop() {
@@ -2255,6 +2354,10 @@ window.addEventListener('load', function () {
 		}
 		if (searchparams.get(authLogValues.active) == 'true') {
 			handleAuthLogSummary(searchparams);
+			return;
+		}
+		if (searchparams.get(authLogValues.storeLastSCforID) == 'true') {
+			storeLastAuthSCforID(searchparams);
 			return;
 		}
 		if (pathPlayerSearch.test(location.pathname)) {
