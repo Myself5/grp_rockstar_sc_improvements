@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		7.10.0
+// @version		7.10.1
 // @description	Improve all kinds of ACP and SocialClub features
 // @author		Myself5
 // @updateURL	https://g.m5.cx/GRSI.user.js
@@ -1417,8 +1417,10 @@ function initMoneyFields(tables, pathSelectors) {
 	const sumMoneyButton = document.getElementById('sumMoneyButton');
 	if (resetSumTableButton != null) {
 		resetSumTableButton.addEventListener("click", function () {
-			gmStorageMaps.playerMapPagesSum.map = deleteMapIDFromStorage(gmStorageMaps.playerMapPagesSum.id);
-			addToSumMoneyButton.style.visibility = 'visible';
+			if (confirm(("Really reset summary?"))) {
+				gmStorageMaps.playerMapPagesSum.map = deleteMapIDFromStorage(gmStorageMaps.playerMapPagesSum.id);
+				addToSumMoneyButton.style.visibility = 'visible';
+			}
 		}, false);
 	}
 	if (addToSumMoneyButton != null) {
