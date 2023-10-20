@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		7.10.1
+// @version		7.10.2
 // @description	Improve all kinds of ACP and SocialClub features
 // @author		Myself5
 // @updateURL	https://g.m5.cx/GRSI.user.js
@@ -1920,7 +1920,11 @@ function injectDropDown() {
 			var newColor = window.prompt("Enter new Color Tag for\n"
 				+ content.desc + "\n"
 				+ "Default: " + default_colors[color] + " Current: " + colors[color]);
+			if (newColor == '' || newColor === null) {
+				newColor = default_colors[color];
+			}
 			gmStorageMaps.colorOptions.map.set(color, newColor);
+			colors[color] = newColor;
 		}
 		saveMapToStorage(gmStorageMaps.colorOptions);
 		window.alert("All Colors set successfully");
