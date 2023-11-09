@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		7.10.2
+// @version		7.11.0
 // @description	Improve all kinds of ACP and SocialClub features
 // @author		Myself5
 // @updateURL	https://g.m5.cx/GRSI.user.js
@@ -128,6 +128,7 @@ const authLogValues = {
 		sc: 'socialclub',
 		page: 'page',
 	},
+	ipLookup: 'https://www.ipqualityscore.com/free-ip-lookup-proxy-vpn-test/lookup/'
 };
 
 const moneyLogSelectors = {
@@ -909,6 +910,16 @@ function getAuthCellContent(filterTable, selector, j, i) {
 	return a;
 }
 
+function getIPCellLink(ip) {
+	var a = document.createElement('a');
+	a.innerHTML = ip;
+	a.style.color = colors.blue;
+
+	a.href = authLogValues.ipLookup + ip;
+
+	return a;
+}
+
 function openFilterTable(filterTable, urlsearch, values, textsummary) {
 	var tbl = document.createElement('table'),
 		header = tbl.createTHead();
@@ -967,6 +978,9 @@ function openFilterTable(filterTable, urlsearch, values, textsummary) {
 					cell.appendChild(getAuthCellContent(filterTable, values.tblSelectors.id, j, i));
 				} else if (values.initAuthHref && j == values.tblSelectors.sc) {
 					cell.appendChild(getAuthCellContent(filterTable, values.tblSelectors.sc, j, i));
+				} else if (values.initAuthHref && j == values.tblSelectors.ip && filterTable[j][i] != "hidden") {
+					var ip = filterTable[j][i];
+					cell.appendChild(getIPCellLink(ip));
 				} else {
 					cell.innerHTML = filterTable[j][i];
 				}
