@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		7.11.1
+// @version		7.12.0
 // @description	Improve all kinds of ACP and SocialClub features
 // @author		Myself5
 // @updateURL	https://g.m5.cx/GRSI.user.js
@@ -128,7 +128,8 @@ const authLogValues = {
 		sc: 'socialclub',
 		page: 'page',
 	},
-	ipLookup: 'https://www.ipqualityscore.com/free-ip-lookup-proxy-vpn-test/lookup/'
+	ipLookup: 'https://www.ipqualityscore.com/free-ip-lookup-proxy-vpn-test/lookup/',
+	iptable: 'body > div.app-layout-canvas > div > main > div > div:nth-child(2) > div > table > tbody > tr > td:nth-child(3)',
 };
 
 const moneyLogSelectors = {
@@ -435,6 +436,22 @@ function waitForInit(pathSelectors) {
 			if (pathSelectors.type == _selectorTypes.socialclub) {
 				var sctable = $(pathSelectors.table);
 				initSCButtons(sctable, getTableValues(sctable), pathSelectors);
+				if (pathSelectors.iptable) {
+					var iptable = $(pathSelectors.iptable);
+					for (var i = 0; i < iptable.length; i++) {
+						var ip = iptable[i].textContent;
+						if (ip != "hidden") {
+							var a = document.createElement('a');
+							a.innerHTML = ip;
+							a.style.color = colors.blue;
+						
+							a.href = authLogValues.ipLookup + ip;
+
+							iptable[i].innerHTML = "";
+							iptable[i].appendChild(a);
+						}
+					}
+				}
 			} else if (pathSelectors.type == _selectorTypes.money) {
 				var tables = {};
 				tables.nameField = $(pathSelectors.nametable);
