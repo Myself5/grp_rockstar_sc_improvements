@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		7.12.0
+// @version		7.13.0
 // @description	Improve all kinds of ACP and SocialClub features
 // @author		Myself5
 // @updateURL	https://g.m5.cx/GRSI.user.js
@@ -133,6 +133,7 @@ const authLogValues = {
 };
 
 const moneyLogSelectors = {
+	active: 'moneySearchActive',
 	count: 'body > div.app-layout-canvas > div > main > div > div.row > div',
 	header: 'body > div.app-layout-canvas > div > main > div > div:nth-child(2) > div > table > thead > tr > th:nth-child(4)',
 	nametable: 'body > div.app-layout-canvas > div > main > div > div:nth-child(2) > div > table > tbody > tr > td:nth-child(1) > a',
@@ -140,6 +141,9 @@ const moneyLogSelectors = {
 	qttytable: 'body > div.app-layout-canvas > div > main > div > div:nth-child(2) > div > table > tbody > tr > td:nth-child(4)',
 	type: _selectorTypes.money,
 	searchDefault: 'skip',
+	headerBlock: 'logsmoney_post',
+	buttonBlock: '#logsmoney_post > div.form-group.m-b-0',
+	inputPage: 'moneySearchEndPage',
 	oppositeBase: websiteACP + "/" + location.pathname.split('/')[1] + '/logs/inventory?', // + Search
 	searchParams: {
 		nick: 'nick',
@@ -147,12 +151,18 @@ const moneyLogSelectors = {
 		id: 'accid',
 		action: 'action',
 		ip: 'ip',
+		desc: 'description',
+		page: 'page',
+		endpage: 'endpage',
+		default: 'skip',
 	},
 	inputFieldIDs: {
 		nick: 'nick',
 		id: 'number-account',
 		ip: 'ip',
+		desc: 'description',
 	},
+	isMoneyLog: true,
 };
 
 const inventoryLogSelectors = {
@@ -444,7 +454,7 @@ function waitForInit(pathSelectors) {
 							var a = document.createElement('a');
 							a.innerHTML = ip;
 							a.style.color = colors.blue;
-						
+
 							a.href = authLogValues.ipLookup + ip;
 
 							iptable[i].innerHTML = "";
@@ -574,6 +584,42 @@ function initSearchButton(pathSelectors, button_listener) {
 			}
 		}
 		searchAllButton.innerHTML = "Search All";
+		search_button.after(searchAllButton);
+		searchAllButton.after(optionsbutton);
+	} else if (pathSelectors.isMoneyLog) {
+		var formBlock = document.getElementById(moneyLogSelectors.headerBlock);
+		var buttonBlock = document.querySelector(moneyLogSelectors.buttonBlock);
+		var pageFormGroup = document.createElement('div');
+		pageFormGroup.className = 'form-group';
+		var pageLabel = document.createElement('label');
+		pageLabel.className = 'sr-only';
+		pageFormGroup.appendChild(pageLabel);
+		var pageInput = document.createElement('input');
+		pageInput.className = 'form-control';
+		pageInput.type = 'number';
+		pageInput.name = moneyLogSelectors.inputPage;
+		pageInput.id = moneyLogSelectors.inputPage;
+		pageInput.placeholder = 'End Page';
+		pageInput.addEventListener("keyup", (event) => {
+			if (event.key === "Enter") {
+				handleMoneySearchAll();
+			}
+		});
+		pageFormGroup.appendChild(pageInput);
+		formBlock.appendChild(pageFormGroup);
+		pageFormGroup.after(buttonBlock);
+
+		var searchAllButton = document.createElement('button');
+		searchAllButton.title = "Click to search and summarize all pages";
+		searchAllButton.type = "button";
+		searchAllButton.className = "btn btn-default";
+		searchAllButton.onclick = function () {
+			handleMoneySearchAll();
+		};
+		searchAllButton.innerHTML = "Search All";
+		searchAllButton.id = "search_all_button";
+		buttonBlock.appendChild(searchAllButton);
+
 		search_button.after(searchAllButton);
 		searchAllButton.after(optionsbutton);
 	} else {
@@ -993,9 +1039,9 @@ function openFilterTable(filterTable, urlsearch, values, textsummary) {
 						var a = document.createElement('a');
 						a.innerHTML = ip;
 						a.style.color = colors.blue;
-				
+
 						a.href = authLogValues.ipLookup + ip;
-				
+
 						cell.appendChild(a);
 					}
 				} else {
@@ -1429,6 +1475,122 @@ function initSCButtons(sc_fields, sc_names, pathSelectors) {
 	$(pathSelectors.count).append(".");
 
 	redrawSCButtons(sc_fields, sc_names);
+}
+
+function getMoneyTable() {
+	var tables = {};
+	tables.nameField = $(moneyLogSelectors.nametable);
+	tables.dateText = getTableValues($(moneyLogSelectors.datetable));
+	tables.qtty = $(moneyLogSelectors.qttytable);
+
+	tables.qttyText = getTableValues(tables.qtty);
+	tables.qttyValue = [];
+
+	for (var i = 0; i < tables.qttyText.length; i++) {
+		tables.qttyValue[i] = { value: parseInt(tables.qttyText[i].replace(/^\D+/g, '')), outgoing: tables.qttyText[i].startsWith('-') };
+	}
+
+	return tables;
+}
+
+function handleMoneySearchAll(urlsearch) {
+	var nickname, id, ip, desc, endpage;
+	if (urlsearch == null) {
+		urlsearch = new URLSearchParams(location.search);
+		var nickset = false;
+		var idset = false;
+		var ipset = false;
+		var descset = false;
+		nickname = document.getElementById(moneyLogSelectors.inputFieldIDs.nick).value;
+		if (nickname.length == 0) {
+			nickname = moneyLogSelectors.searchParams.default;
+		} else {
+			nickset = true;
+		}
+
+		var id = document.getElementById(moneyLogSelectors.inputFieldIDs.id).value;
+		if (id.length == 0) {
+			id = moneyLogSelectors.searchParams.default;
+		} else {
+			idset = true;
+		}
+
+		var ip = document.getElementById(moneyLogSelectors.inputFieldIDs.ip).value;
+		if (ip.length == 0) {
+			ip = moneyLogSelectors.searchParams.default;
+		} else {
+			ipset = true;
+		}
+
+		var desc = document.getElementById(moneyLogSelectors.inputFieldIDs.desc).value;
+		if (desc.length == 0) {
+			desc = moneyLogSelectors.searchParams.default;
+		} else {
+			descset = true;
+		}
+
+		var endpage = parseInt(document.getElementById(moneyLogSelectors.inputPage).value);
+		if ((nickset || idset || ipset || descset) && !isNaN(endpage)) {
+			if (window.confirm(
+				"Do you want to summarize all pages with the following parameters?\n"
+				+ (nickset ? ("Nickname: " + nickname + "\n") : "")
+				+ (idset ? ("Account ID: " + id + "\n") : "")
+				+ (ipset ? ("IP: " + ip + "\n") : "")
+				+ (descset ? ("To/From whom: " + desc + "\n") : "")
+				+ ("Endpage: " + endpage + "\n")
+			)) {
+				gmStorageMaps.playerMapPagesSum.map = deleteMapIDFromStorage(gmStorageMaps.playerMapPagesSum.id);
+
+				var urlsearch = new URLSearchParams(location.search);
+				urlsearch.set(moneyLogSelectors.searchParams.nick, nickname);
+				urlsearch.set(moneyLogSelectors.searchParams.id, id);
+				urlsearch.set(moneyLogSelectors.searchParams.ip, ip);
+				urlsearch.set(moneyLogSelectors.searchParams.desc, desc);
+				urlsearch.set(moneyLogSelectors.searchParams.endpage, endpage);
+
+				var page = parseInt(urlsearch.get(moneyLogSelectors.searchParams.page));
+				if (isNaN(page)) {
+					page = 1;
+				}
+
+				urlsearch.set(moneyLogSelectors.searchParams.page, page);
+
+				if (page == endpage) {
+					window.alert("Startpage is equal to Endpage!");
+					return;
+				}
+				urlsearch.set(moneyLogSelectors.active, "true");
+
+				openPaginationPage(urlsearch);
+			}
+		} else {
+			window.alert("Search Parameters or End Page specified!");
+		}
+	} else {
+		if (urlsearch.get(moneyLogSelectors.active) == 'true') {
+			var page = parseInt(urlsearch.get(moneyLogSelectors.searchParams.page));
+			var endpage = parseInt(urlsearch.get(moneyLogSelectors.searchParams.endpage));
+			if (page < endpage) {
+				urlsearch.set(moneyLogSelectors.searchParams.page, page + 1);
+			} else if (page > endpage) {
+				urlsearch.set(moneyLogSelectors.searchParams.page, page - 1);
+			} else {
+				// Open Window, return, reload
+				openDailyTotalTable(getTrimmedDatePlayerData(addToDailySumMap(getMoneyTable()).map));
+
+				urlsearch.delete(moneyLogSelectors.active);
+
+				openPaginationPage(urlsearch);
+			}
+
+			addToDailySumMap(getMoneyTable());
+
+			openPaginationPage(urlsearch);
+		} else {
+			window.alert("Something went wrong");
+		}
+	}
+
 }
 
 function initMoneyFields(tables, pathSelectors) {
@@ -2387,6 +2549,10 @@ window.addEventListener('load', function () {
 		}
 		if (searchparams.get(fractionSearchValues.active) == 'true') {
 			handleFractionSearchEntry(searchparams);
+			return;
+		}
+		if (searchparams.get(moneyLogSelectors.active) == 'true') {
+			handleMoneySearchAll(searchparams);
 			return;
 		}
 		if (searchparams.get(authLogValues.active) == 'true') {
