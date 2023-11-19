@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		GrandRP/Rockstar Social Club improvements
 // @namespace	https://myself5.de
-// @version		7.13.0
+// @version		8.0.0
 // @description	Improve all kinds of ACP and SocialClub features
 // @author		Myself5
 // @updateURL	https://g.m5.cx/GRSI.user.js
@@ -105,17 +105,16 @@ const authLogValues = {
 		ip: 2,
 		sc: 3,
 		date: 4,
+		page: 5,
 	},
-	searchAll: true,
-	initialSearchPage: 1000000,
-	tblDefault: '[]',
+	isAuthLog: true,
+	initialSearchPage: 1,
+	tblDefault: [],
 	filterTableDefault: [[], [], [], [], []],
 	tblGMPrefix: 'ACPAuthLogFilterPrefix_',
-	paginationLastPage: '#DataTables_Table_0_paginate > ul > li > a.pagination-link',
+	paginationLastPage: '#DataTables_Table_0_paginate ul li a.pagination-link',
 	active: 'authLogSearchActive',
 	storeLastSCforID: 'authLogStoreLastSCforIDActive',
-	initialPageCheck: 'authLogSearchInitialPageCheck',
-	compareIP: 'authLogSearchCompareIP',
 	levelSelector: '#header-navbar-collapse > ul > li.dropdown.dropdown-profile > a > span',
 	minimalIPLevel: 5,
 	initAuthHref: true,
@@ -482,6 +481,182 @@ function getTableValues(table) {
 	return tableinternal;
 }
 
+function tableTo2DArray(table, page, skipHeader = false) {
+	let data = [];
+	for (let i = skipHeader ? 1 : 0; i < table.rows.length; i++) {
+		let row = table.rows[i];
+		let rowData = [];
+		for (let cell of row.cells) {
+			rowData.push(cell.textContent);
+		}
+		rowData.push(page.toString());
+		data.push(rowData);
+	}
+	return data;
+}
+
+async function getLastAuthPage(urlsearch) {
+	let parser = new DOMParser();
+	urlsearch.set('page', 1000000);
+	let url = location.origin + location.pathname + '?' + urlsearch.toString();
+	let response = await fetch(url);
+	let text = await response.text();
+	let doc = parser.parseFromString(text, "text/html");
+	let pagination = doc.querySelectorAll(authLogValues.paginationLastPage);
+
+	return pagination.length > 0 ? pagination[pagination.length - 1].text : '1';
+}
+
+async function getFullTable(urlsearch, endpage, progress = false) {
+	let fullTableData = [];
+	let page = 1;
+	let parser = new DOMParser();
+
+	if (progress == true) {
+		progressText = document.getElementById('currentpage');
+		progressText.innerHTML = 'Page: 0/' + endpage;
+	}
+
+	while (page <= endpage) {
+		urlsearch.set("page", page);
+		if (progress == true) {
+			progressText.innerHTML = 'Page: ' + page + '/' + endpage;
+		}
+		let url = location.origin + location.pathname + '?' + urlsearch.toString();
+		let response = await fetch(url);
+		let text = await response.text();
+		let doc = parser.parseFromString(text, "text/html");
+		let table = doc.querySelector('.card-block table');
+		if (table.rows.length <= 1) {
+			break;
+		}
+		fullTableData.push(...tableTo2DArray(table, page, page > 1));
+		page++;
+	}
+	return fullTableData;
+}
+
+function initAuthLogSearchAll(pathSelectors) {
+	var searchAllButton = document.createElement('button');
+	searchAllButton.title = "Click to search and summarize all pages";
+	searchAllButton.type = "button";
+	searchAllButton.className = "btn btn-default";
+	searchAllButton.onclick = async function () {
+		var nickset = false;
+		var idset = false;
+		var ipset = false;
+		var scset = false;
+		var nickname = document.getElementById(pathSelectors.searchParams.nick).value;
+		if (nickname.length == 0) {
+			nickname = pathSelectors.searchParams.default;
+		} else {
+			nickset = true;
+		}
+		var playerID = document.getElementById(pathSelectors.searchParams.id).value;
+		if (playerID.length == 0) {
+			playerID = pathSelectors.searchParams.default;
+		} else {
+			idset = true;
+		}
+		var ip = document.getElementById(pathSelectors.searchParams.ip).value;
+		if (ip.length == 0) {
+			ip = pathSelectors.searchParams.default;
+		} else {
+			ipset = true;
+		}
+		var socialclub = document.getElementById(pathSelectors.searchParams.sc).value;
+		if (socialclub.length == 0) {
+			socialclub = pathSelectors.searchParams.default;
+		} else {
+			scset = true;
+		}
+
+		var compareIP = false;
+		if (!ipset) {
+			var levelInt = parseInt($(pathSelectors.levelSelector)[0].textContent.split('(')[1].replace(/\D/g, ""));
+			if (levelInt > pathSelectors.minimalIPLevel) {
+				compareIP = window.confirm("Do you want to check for IP Changes?");
+			}
+		}
+
+		if (nickset || idset || ipset || scset) {
+			if (window.confirm(
+				"Do you want to summarize all pages with the following parameters?\n"
+				+ (nickset ? ("Nickname: " + nickname + "\n") : "")
+				+ (idset ? ("ID: " + playerID + "\n") : "")
+				+ (ipset ? ("IP: " + ip + "\n") : "")
+				+ (scset ? ("SocialClub: " + socialclub + "\n") : "")
+			)) {
+				document.getElementById('loading').style.display = '';
+				progressText = document.getElementById('currentpage');
+				progressText.innerHTML = 'Page: 0/?';
+
+				var urlsearch = new URLSearchParams();
+				urlsearch.set(pathSelectors.searchParams.nick, nickname);
+				urlsearch.set(pathSelectors.searchParams.id, playerID);
+				urlsearch.set(pathSelectors.searchParams.ip, ip);
+				urlsearch.set(pathSelectors.searchParams.sc, socialclub);
+				urlsearch.set(pathSelectors.searchParams.page, pathSelectors.initialSearchPage);
+
+				await fetchAndProcessAuthData(urlsearch, compareIP);
+
+				document.getElementById('loading').style.display = 'none';
+
+			}
+		} else {
+			window.alert("No Search parameters defined. Search All no possible.");
+		}
+	}
+	searchAllButton.innerHTML = "Search All";
+
+	return searchAllButton;
+}
+
+async function fetchAndProcessAuthData(urlsearch, compareIP = false) {
+	var endpage = await getLastAuthPage(urlsearch);
+	var fullTable = await getFullTable(urlsearch, endpage, true);
+
+	var objectTable = authLogValues.tblDefault;
+
+	for (let i = (fullTable.length - 1); i > 0; i--) {
+		var entry = {};
+		entry.nick = fullTable[i][authLogValues.tblSelectors.nick];
+		entry.id = fullTable[i][authLogValues.tblSelectors.id];
+		entry.ip = fullTable[i][authLogValues.tblSelectors.ip];
+		entry.sc = fullTable[i][authLogValues.tblSelectors.sc];
+		entry.date = fullTable[i][authLogValues.tblSelectors.date];
+		entry.firstpage = fullTable[i][authLogValues.tblSelectors.page];
+		entry.loginAmount = 1;
+
+		const tblContent = GetFromobjTable(objectTable, entry, compareIP);
+		if (tblContent) {
+			tblContent.loginAmount += 1;
+		} else {
+			objectTable.push(entry);
+		}
+	}
+
+	// Convert objectTable to filterTable
+	var filterTable = [...authLogValues.filterTableDefault];
+	filterTable[authLogValues.tblSelectors.nick].push(fullTable[0][authLogValues.tblSelectors.nick]);
+	filterTable[authLogValues.tblSelectors.id].push(fullTable[0][authLogValues.tblSelectors.id]);
+	filterTable[authLogValues.tblSelectors.ip].push(fullTable[0][authLogValues.tblSelectors.ip]);
+	filterTable[authLogValues.tblSelectors.sc].push(fullTable[0][authLogValues.tblSelectors.sc]);
+	filterTable[authLogValues.tblSelectors.date].push(fullTable[0][authLogValues.tblSelectors.date]);
+
+	for (var i = 0; i < objectTable.length; i++) {
+		filterTable[authLogValues.tblSelectors.nick].push(objectTable[i].nick);
+		filterTable[authLogValues.tblSelectors.id].push(objectTable[i].id);
+		filterTable[authLogValues.tblSelectors.ip].push(objectTable[i].ip);
+		filterTable[authLogValues.tblSelectors.sc].push(objectTable[i].sc);
+		filterTable[authLogValues.tblSelectors.date].push(
+			objectTable[i].date
+			+ " (First Login Page: " + objectTable[i].firstpage + " Total Logins: " + objectTable[i].loginAmount + ")");
+	}
+
+	openFilterTable(filterTable, urlsearch, authLogValues, true);
+}
+
 function initSearchButton(pathSelectors, button_listener) {
 	var search_button;
 	// Search Button on Auto an money logs is not labled, search by class and type
@@ -516,76 +691,25 @@ function initSearchButton(pathSelectors, button_listener) {
 	}
 	optionsbutton.innerHTML = "Options";
 
-	if (pathSelectors.searchAll) {
-		var searchAllButton = document.createElement('button');
-		searchAllButton.title = "Click to search and summarize all pages";
-		searchAllButton.type = "button";
-		searchAllButton.className = "btn btn-default";
-		searchAllButton.onclick = function () {
-			var nickset = false;
-			var idset = false;
-			var ipset = false;
-			var scset = false;
-			var nickname = document.getElementById(pathSelectors.searchParams.nick).value;
-			if (nickname.length == 0) {
-				nickname = pathSelectors.searchParams.default;
-			} else {
-				nickset = true;
-			}
-			var playerID = document.getElementById(pathSelectors.searchParams.id).value;
-			if (playerID.length == 0) {
-				playerID = pathSelectors.searchParams.default;
-			} else {
-				idset = true;
-			}
-			var ip = document.getElementById(pathSelectors.searchParams.ip).value;
-			if (ip.length == 0) {
-				ip = pathSelectors.searchParams.default;
-			} else {
-				ipset = true;
-			}
-			var socialclub = document.getElementById(pathSelectors.searchParams.sc).value;
-			if (socialclub.length == 0) {
-				socialclub = pathSelectors.searchParams.default;
-			} else {
-				scset = true;
-			}
-
-			var compareIP = false;
-			if (!ipset) {
-				var levelInt = parseInt($(pathSelectors.levelSelector)[0].textContent.split('(')[1].replace(/\D/g, ""));
-				if (levelInt > pathSelectors.minimalIPLevel) {
-					compareIP = window.confirm("Do you want to check for IP Changes?");
-				}
-			}
-
-			if (nickset || idset || ipset || scset) {
-				if (window.confirm(
-					"Do you want to summarize all pages with the following parameters?\n"
-					+ (nickset ? ("Nickname: " + nickname + "\n") : "")
-					+ (idset ? ("ID: " + playerID + "\n") : "")
-					+ (ipset ? ("IP: " + ip + "\n") : "")
-					+ (scset ? ("SocialClub: " + socialclub + "\n") : "")
-				)) {
-					// Start Processing by going to oldest Page
-					var urlsearch = new URLSearchParams(location.search);
-					urlsearch.set(pathSelectors.searchParams.nick, nickname);
-					urlsearch.set(pathSelectors.searchParams.id, playerID);
-					urlsearch.set(pathSelectors.searchParams.ip, ip);
-					urlsearch.set(pathSelectors.searchParams.sc, socialclub);
-					urlsearch.set(pathSelectors.searchParams.page, pathSelectors.initialSearchPage);
-					urlsearch.set(pathSelectors.active, "true");
-					urlsearch.set(pathSelectors.initialPageCheck, "true");
-					urlsearch.set(pathSelectors.compareIP, compareIP);
-					openPaginationPage(urlsearch);
-				}
-			} else {
-				window.alert("No Search parameters defined. Search All no possible.");
-			}
-		}
-		searchAllButton.innerHTML = "Search All";
+	if (pathSelectors.isAuthLog) {
+		var searchAllButton = initAuthLogSearchAll(pathSelectors);
 		search_button.after(searchAllButton);
+
+		var loading = document.createElement('img');
+		loading.src = 'https://i.gifer.com/ZKZg.gif';
+		loading.height = 38;
+		loading.id = 'loading';
+		loading.style.display = 'none';
+
+		loading.style.padding = '0px 5px';
+
+		var progress = document.createElement('a');
+		progress.id = 'currentpage';
+		progress.style.color = 'initial';
+
 		searchAllButton.after(optionsbutton);
+		optionsbutton.after(loading);
+		loading.after(progress);
 	} else if (pathSelectors.isMoneyLog) {
 		var formBlock = document.getElementById(moneyLogSelectors.headerBlock);
 		var buttonBlock = document.querySelector(moneyLogSelectors.buttonBlock);
@@ -852,99 +976,6 @@ function GetFromobjTable(objTable, entry, compareIP) {
 	return false;
 }
 
-function handleAuthLogSummary(urlsearch) {
-	var table = $(authLogValues.mainTable)[0];
-	var nickname = urlsearch.get(authLogValues.searchParams.nick);
-	var playerID = urlsearch.get(authLogValues.searchParams.id);
-	var ip = urlsearch.get(authLogValues.searchParams.ip);
-	var socialclub = urlsearch.get(authLogValues.searchParams.sc);
-	if (urlsearch.get(authLogValues.initialPageCheck) === "true") {
-		var oldestPage = parseInt($(authLogValues.paginationLastPage).last().text());
-		if (isNaN(oldestPage)) {
-			oldestPage = 1;
-		}
-		urlsearch.delete(authLogValues.initialPageCheck);
-		urlsearch.set(authLogValues.searchParams.page, oldestPage);
-		GM_deleteValue(
-			authLogValues.tblGMPrefix
-			+ nickname + "_"
-			+ playerID + "_"
-			+ ip + "_"
-			+ socialclub);
-		openPaginationPage(urlsearch);
-		return;
-	}
-
-	var compareIP = urlsearch.get(authLogValues.compareIP) === "true";
-	var page = parseInt(urlsearch.get(authLogValues.searchParams.page));
-
-	var objectTable = JSON.parse(GM_getValue(
-		authLogValues.tblGMPrefix
-		+ nickname + "_"
-		+ playerID + "_"
-		+ ip + "_"
-		+ socialclub
-		, authLogValues.tblDefault));
-
-	for (let i = (table.rows.length - 1); i > 0; i--) {
-		var entry = { ...authLogValues.tblSelectors };
-		entry.nick = table.rows.item(i).cells.item(authLogValues.tblSelectors.nick).textContent;
-		entry.id = table.rows.item(i).cells.item(authLogValues.tblSelectors.id).textContent;
-		entry.ip = table.rows.item(i).cells.item(authLogValues.tblSelectors.ip).textContent;
-		entry.sc = table.rows.item(i).cells.item(authLogValues.tblSelectors.sc).textContent;
-		entry.date = table.rows.item(i).cells.item(authLogValues.tblSelectors.date).textContent;
-		entry.firstpage = page;
-		entry.loginAmount = 1;
-
-		const tblContent = GetFromobjTable(objectTable, entry, compareIP);
-		if (tblContent) {
-			tblContent.loginAmount += 1;
-		} else {
-			objectTable.push(entry);
-		}
-	}
-
-	if (page == 1) {
-		// Convert objectTable to filterTable
-		var filterTable = [...authLogValues.filterTableDefault];
-		if (filterTable[0].length == 0 && table.rows.length > 0) {
-			// Add Headlines once
-			addToTable(filterTable, table, authLogValues.tblSelectors, 0);
-		}
-
-		for (var i = 0; i < objectTable.length; i++) {
-			filterTable[authLogValues.tblSelectors.nick].push(objectTable[i].nick);
-			filterTable[authLogValues.tblSelectors.id].push(objectTable[i].id);
-			filterTable[authLogValues.tblSelectors.ip].push(objectTable[i].ip);
-			filterTable[authLogValues.tblSelectors.sc].push(objectTable[i].sc);
-			filterTable[authLogValues.tblSelectors.date].push(
-				objectTable[i].date
-				+ " (First Login Page: " + objectTable[i].firstpage + " Total Logins: " + objectTable[i].loginAmount + ")");
-		}
-
-		urlsearch.delete(authLogValues.active);
-		openFilterTable(filterTable, urlsearch, authLogValues, true);
-		GM_deleteValue(
-			authLogValues.tblGMPrefix
-			+ nickname + "_"
-			+ playerID + "_"
-			+ ip + "_"
-			+ socialclub);
-		return;
-	} else {
-		GM_setValue(
-			authLogValues.tblGMPrefix
-			+ nickname + "_"
-			+ playerID + "_"
-			+ ip + "_"
-			+ socialclub
-			, JSON.stringify(objectTable));
-
-		urlsearch.set(authLogValues.searchParams.page, page - 1);
-	}
-	openPaginationPage(urlsearch);
-}
-
 function getAuthCellContent(filterTable, selector, j, i) {
 	var content = filterTable[j][i];
 	var a = document.createElement('a');
@@ -957,8 +988,6 @@ function getAuthCellContent(filterTable, selector, j, i) {
 	urlsearch.set(authLogValues.searchParams.ip, authLogValues.searchParams.default);
 	urlsearch.set(authLogValues.searchParams.page, authLogValues.initialSearchPage);
 	urlsearch.set(authLogValues.active, "true");
-	urlsearch.set(authLogValues.initialPageCheck, "true");
-	urlsearch.set(authLogValues.compareIP, false);
 
 	if (selector == authLogValues.tblSelectors.id) {
 		urlsearch.set(authLogValues.searchParams.id, content);
@@ -2555,10 +2584,6 @@ window.addEventListener('load', function () {
 			handleMoneySearchAll(searchparams);
 			return;
 		}
-		if (searchparams.get(authLogValues.active) == 'true') {
-			handleAuthLogSummary(searchparams);
-			return;
-		}
 		if (searchparams.get(authLogValues.storeLastSCforID) == 'true') {
 			storeLastAuthSCforID(searchparams);
 			return;
@@ -2568,6 +2593,12 @@ window.addEventListener('load', function () {
 		}
 		if (pathAuthLogs.test(location.pathname)) {
 			initSearchButton(authLogValues, false);
+		}
+		if (searchparams.get(authLogValues.active) == 'true') {
+			searchparams.delete(authLogValues.active);
+			document.getElementById('loading').style.display = '';
+			fetchAndProcessAuthData(searchparams);
+			document.getElementById('loading').style.display = 'none';
 		}
 		if (pathMoneyLogs.test(location.pathname)) {
 			initClickableDate(moneyLogSelectors);
