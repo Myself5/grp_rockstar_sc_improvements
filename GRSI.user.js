@@ -509,30 +509,34 @@ async function getLastAuthPage(urlsearch) {
 
 async function getFullTable(urlsearch, endpage, progress = false) {
 	let fullTableData = [];
-	let page = 1;
 	let parser = new DOMParser();
-
+	let page = 0;
 	if (progress == true) {
 		progressText = document.getElementById('currentpage');
-		progressText.innerHTML = 'Page: 0/' + endpage;
+		progressText.innerHTML = 'Page: ' + page + '/' + endpage;
 	}
 
-	while (page <= endpage) {
-		urlsearch.set("page", page);
-		if (progress == true) {
-			progressText.innerHTML = 'Page: ' + page + '/' + endpage;
-		}
-		let url = location.origin + location.pathname + '?' + urlsearch.toString();
-		let response = await fetch(url);
-		let text = await response.text();
-		let doc = parser.parseFromString(text, "text/html");
-		let table = doc.querySelector('.card-block table');
-		if (table.rows.length <= 1) {
-			break;
-		}
-		fullTableData.push(...tableTo2DArray(table, page, page > 1));
-		page++;
+	var promises = [];
+	for (let i = 1; i <= endpage; i++) {
+		promises.push(new Promise(async (resolve, reject) => {
+			urlsearch.set("page", i);
+			let url = location.origin + location.pathname + '?' + urlsearch.toString();
+			let response = await fetch(url);
+			let text = await response.text();
+			let doc = parser.parseFromString(text, "text/html");
+			let table = doc.querySelector('.card-block table');
+			if (progress == true) {
+				page++;
+				progressText.innerHTML = 'Page: ' + page + '/' + endpage;
+			}
+			resolve(tableTo2DArray(table, i, i > 1));
+		}));
 	}
+
+	await Promise.all(promises).then((results) => {
+		results.forEach((element) => fullTableData.push(...element));
+	});
+
 	return fullTableData;
 }
 
