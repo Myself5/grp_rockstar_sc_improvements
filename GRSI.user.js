@@ -113,7 +113,6 @@ const authLogValues = {
 	tblGMPrefix: 'ACPAuthLogFilterPrefix_',
 	paginationLastPage: '#DataTables_Table_0_paginate ul li a.pagination-link',
 	active: 'authLogSearchActive',
-	storeLastSCforID: 'authLogStoreLastSCforIDActive',
 	levelSelector: '#header-navbar-collapse > ul > li.dropdown.dropdown-profile > a > span',
 	minimalIPLevel: 5,
 	initAuthHref: true,
@@ -268,7 +267,6 @@ const cheaterTag = '⌊CHEATER⌋' + zeroWidthWhitespace;
 const pccheckTag = '⌊PC CHECK⌋' + zeroWidthWhitespace;
 
 const scStorageIdentifier = "SCStoragePrefix_";
-const idToSCStorageIdentifier = "IDToSCStoragePrefix_";
 
 const scContextMenu = {
 	check: {
@@ -301,9 +299,8 @@ const scContextMenu = {
 	},
 };
 
-var scContextCSSArray =
-	[
-		"#context-menu { \
+var scContextCSSArray = [
+	"#context-menu { \
 	position: fixed;\
 	z-index: 10000;\
 	width: 150px;\
@@ -312,22 +309,51 @@ var scContextCSSArray =
 	transform: scale(0);\
 	transform-origin: top left;\
   }",
-		"#context-menu.visible {\
+	"#context-menu.visible {\
 	transform: scale(1);\
 	transition: transform 200ms ease-in-out;\
   }",
-		"#context-menu .item {\
+	"#context-menu .item {\
 	padding: 8px 10px;\
 	font-size: 15px;\
 	color: #eee;\
 	cursor: pointer;\
 	border-radius: inherit;\
 }",
-		"#context-menu .item:hover {\
+	"#context-menu .item:hover {\
 	background: #343434;\
 }"
-	];
+];
 
+const overlayCSSArray = [
+	"#processingOverlay { \
+	position: fixed;\
+	display: none;\
+	width: 100%;\
+	height: 100%;\
+	top: 0;\
+	left: 0;\
+	right: 0;\
+	bottom: 0;\
+	background-color: rgba(0,0,0,0.5);\
+	z-index: 2;\
+	cursor: pointer;\
+    }",
+	"#processingOverlayContent{\
+	position: absolute;\
+	top: 50%;\
+	left: 50%;\
+	font-size: 50px;\
+	color: white;\
+	text-align: center; \
+	transform: translate(-50%,-50%);\
+	-ms-transform: translate(-50%,-50%);\
+    }",
+	"#processingOverlayButton{\
+    font-size: 35px;\
+	border-radius: 15px;\
+    }",
+]
 
 const default_colors = {
 	blue: "rgb(85, 160, 200)",
@@ -360,8 +386,6 @@ const colors = {
 	red: colorstorage.red.value,
 	yellow: colorstorage.yellow.value,
 }
-
-var funmodeActive = gmStorageMaps.configOptions.map.has('funmodeActive') ? gmStorageMaps.configOptions.map.get('funmodeActive') : optionsDefaultValues.funmodeActive;
 
 // RS Variables
 const hostnameRS = 'socialclub.rockstargames.com';
@@ -496,7 +520,7 @@ function tableTo2DArray(table, page, skipHeader = false) {
 
 async function getLastAuthPage(urlsearch) {
 	let parser = new DOMParser();
-	urlsearch.set('page', 1000000);
+	urlsearch.set(authLogValues.searchParams.page, 1000000);
 	let url = location.origin + location.pathname + '?' + urlsearch.toString();
 	let response = await fetch(url);
 	let text = await response.text();
@@ -518,7 +542,7 @@ async function getFullTable(urlsearch, endpage, progressText) {
 	var promises = [];
 	for (let i = 1; i <= endpage; i++) {
 		promises.push(new Promise(async (resolve, reject) => {
-			urlsearch.set("page", i);
+			urlsearch.set(authLogValues.searchParams.page, i);
 			let url = location.origin + location.pathname + '?' + urlsearch.toString();
 			let response = await fetch(url);
 			let text = await response.text();
@@ -535,6 +559,50 @@ async function getFullTable(urlsearch, endpage, progressText) {
 
 	await Promise.all(promises).then((results) => {
 		results.forEach((element) => fullTableData.push(...element));
+	});
+
+	return fullTableData;
+}
+
+async function getSCforIDTable(ids, progressText) {
+	let fullTableData = [];
+	let parser = new DOMParser();
+	let progress = 0;
+
+	if (progressText) {
+		progressText.innerHTML = 'Progress: ' + progress + '/' + ids.length;
+	}
+	document.title = '[' + progress + '/' + ids.length + '] ' + originalTitle;
+
+	var urlsearch = new URLSearchParams();
+	urlsearch.set(authLogValues.searchParams.nick, authLogValues.searchParams.default);
+	urlsearch.set(authLogValues.searchParams.page, '1');
+	urlsearch.set(authLogValues.searchParams.ip, authLogValues.searchParams.default);
+	urlsearch.set(authLogValues.searchParams.sc, authLogValues.searchParams.default);
+
+	var promises = [];
+	for (let i = 0; i < ids.length; i++) {
+		promises.push(new Promise(async (resolve, reject) => {
+			urlsearch.set(authLogValues.searchParams.id, ids[i]);
+			let url = authorizationLogsBase + urlsearch.toString();
+			let response = await fetch(url);
+			let text = await response.text();
+			let doc = parser.parseFromString(text, "text/html");
+			let table = doc.querySelector('.card-block table');
+			progress++;
+			if (progressText) {
+				progressText.innerHTML = 'Progress: ' + progress + '/' + ids.length;
+			}
+			document.title = '[' + progress + '/' + ids.length + '] ' + originalTitle;
+
+			resolve(tableTo2DArray(table, 1, false));
+		}));
+	}
+
+	await Promise.all(promises).then((results) => {
+		results.forEach((element) => {
+			fullTableData.push(element.length > 1 ? element[1][authLogValues.tblSelectors.sc] : '');
+		})
 	});
 
 	return fullTableData;
@@ -1807,16 +1875,6 @@ function getSCObj(name) {
 	return nameObj;
 }
 
-function getSCObjforID(id) {
-	var sc = GM_getValue(idToSCStorageIdentifier + id, "");
-	var scObj = { name: "" };
-	if (sc) {
-		scObj = getSCObj(sc);
-		scObj.name = sc;
-	}
-	return scObj;
-}
-
 function submitSCResult(name, type, value) {
 	if (name != null && name.length > 2) {
 		var nameObj = getSCObj(name);
@@ -2082,31 +2140,6 @@ function processRSPlayerCards(playerCards) {
 	}
 }
 
-async function fetchSocialClubForIDList(ids) {
-	for (let i = 0; i < ids.length; i++) {
-		var urlsearch = new URLSearchParams();
-		urlsearch.set(authLogValues.searchParams.nick, authLogValues.searchParams.default);
-		urlsearch.set(authLogValues.searchParams.id, ids[i]);
-		urlsearch.set(authLogValues.searchParams.ip, authLogValues.searchParams.default);
-		urlsearch.set(authLogValues.searchParams.sc, authLogValues.searchParams.default);
-		urlsearch.set(authLogValues.storeLastSCforID, true);
-		var url = authorizationLogsBase + urlsearch.toString();
-		var win = window.open(url, ids[i]);
-		win.blur();
-		window.focus();
-		if (!funmodeActive) {
-			await new Promise(resolve => setTimeout(resolve, 1500));
-		}
-	}
-}
-
-function storeLastAuthSCforID(search) {
-	var lastSC = getTableValues($(authLogValues.table))[0];
-	var id = search.get(authLogValues.searchParams.id);
-	GM_setValue(idToSCStorageIdentifier + id, lastSC);
-	window.close();
-}
-
 function injectDropDown() {
 	const li = $('#header-navbar-collapse > ul > li.dropdown.dropdown-profile > ul > li')[0];
 	const cheaterentry = document.createElement('a');
@@ -2188,28 +2221,6 @@ function injectDropDown() {
 	const version = document.createElement('a');
 	version.innerHTML = "GRSI Version: " + GM_info.script.version;
 	version.id = "grsi_version";
-	var numberOfClicks = [];
-	version.onclick = function () {
-		// Funmode
-		if (numberOfClicks.length < 5) {
-			numberOfClicks.push(new Date().getTime());
-		} else {
-			var diff = numberOfClicks[numberOfClicks.length - 1] - numberOfClicks[0];
-			if (diff < 5000) {
-				funmodeActive = !funmodeActive;
-				gmStorageMaps.configOptions.map.set('funmodeActive', funmodeActive);
-				saveMapToStorage(gmStorageMaps.configOptions);
-				if (funmodeActive) {
-					alert("Funmode activated.");
-				} else {
-					alert("Funmode deactivated.");
-				}
-				numberOfClicks = [];
-			}
-			numberOfClicks.shift();
-			numberOfClicks.push(new Date().getTime());
-		}
-	}
 	const cheaterscid = document.createElement('a');
 	cheaterscid.innerHTML = "Fetch Cheater SCIDs";
 	cheaterscid.id = "cheater_scid";
@@ -2274,55 +2285,49 @@ function injectDropDown() {
 		}
 		window.alert("All SCIDs imported successfully");
 	}
-	const fetchsocialclubforid = document.createElement('a');
-	fetchsocialclubforid.innerHTML = "Fetch SocialClubs for ID";
-	fetchsocialclubforid.id = "fetch_scid4id";
-	fetchsocialclubforid.onclick = async function () {
-		var idstring = window.prompt("Enter ID List\n"
-			+ "(Make sure they are from a table and each entry is on a new line)");
-		var idsnl = idstring.split('\r\n');
-		var idsspace = idstring.split(' ');
-		fetchSocialClubForIDList((idsnl.length > idsspace.length) ? idsnl : idsspace);
-		window.alert("Social Club fetch started successfully");
-	}
 	const getsocialclubforid = document.createElement('a');
-	getsocialclubforid.innerHTML = "Get SocialClubs for ID";
+	getsocialclubforid.innerHTML = "Get SocialClub for IDs";
 	getsocialclubforid.id = "get_scid4id";
 	getsocialclubforid.onclick = async function () {
 		var idstring = window.prompt("Enter ID List\n"
 			+ "(Make sure they are from a table and each entry is on a new line)");
 		var idsnl = idstring.split('\r\n');
 		var idsspace = idstring.split(' ');
-		var scstring = "";
 		var ids = (idsnl.length > idsspace.length) ? idsnl : idsspace;
-		for (var i = 0; i < ids.length; i++) {
-			var scObj = getSCObjforID(ids[i]);
+
+		var loadingOverlay = document.getElementById('processingOverlay');
+		var loadingDesc = document.getElementById('processingOverlayDescription');
+		var loadingButton = document.getElementById('processingOverlayButton');
+		var loadingProgress = document.getElementById('processingOverlayProgress');
+		var loadingSpinner = document.getElementById('processingOverlaySpinner');
+
+		loadingDesc.innerHTML = "Getting SocialClub for IDs...";
+		loadingOverlay.style.display = 'block';
+
+		var scs = await getSCforIDTable(ids, loadingProgress);
+		var scstring = "";
+
+		for (var i = 0; i < scs.length; i++) {
+			var scObj = { name: "" };
+			if (scs[i]) {
+				scObj = getSCObj(scs[i]);
+				scObj.name = scs[i];
+			}
 			scstring += scObj.name + '\t' + (scObj.scid ? scObj.scid : "") + '\r\n';
 		}
-		await new Promise(resolve => setTimeout(resolve, 500));
-		await navigator.clipboard.writeText(scstring);
-		await new Promise(resolve => setTimeout(resolve, 500));
-		window.alert("All SocialClubs copied to clipboard successfully");
-	}
-	const fetchvalidscids = document.createElement('a');
-	fetchvalidscids.innerHTML = "Fetch valid SocialClub IDs";
-	fetchvalidscids.id = "fetch_valid_scids";
-	fetchvalidscids.onclick = async function () {
-		var toBeProcessed = 0;
-		var scToBeUpdatedEntries = await GM.listValues();
-		for (let i = 0; i < scToBeUpdatedEntries.length; i++) {
-			if (scToBeUpdatedEntries[i].startsWith(scStorageIdentifier)) {
-				var nameObj = JSON.parse(GM_getValue(scToBeUpdatedEntries[i], "{}"));
-				if (!nameObj.scid && nameObj.valid) {
-					bgCheckSC(scToBeUpdatedEntries[i].replace(scStorageIdentifier, ""));
-					await new Promise(resolve => setTimeout(resolve, 2500));
-					if (++toBeProcessed > 15) {
-						break;
-					}
-				}
-			}
+
+		loadingButton.style.display = '';
+		loadingSpinner.style.display = 'none';
+		loadingProgress.innerHTML = 'Progress: Done!';
+		loadingButton.onclick = async function () {
+			await navigator.clipboard.writeText(scstring);
+			loadingOverlay.style.display = 'none';
+			loadingButton.style.display = 'none';
+			loadingSpinner.style.display = '';
+			document.title = originalTitle;
 		}
 	}
+
 	li.appendChild(cheaterentry);
 	li.appendChild(clearcheaters);
 	li.appendChild(pccheckentry);
@@ -2330,12 +2335,52 @@ function injectDropDown() {
 	li.appendChild(cheaterscid);
 	li.appendChild(getscids);
 	li.appendChild(importaccandidlist);
-	li.appendChild(fetchsocialclubforid);
 	li.appendChild(getsocialclubforid);
-	if (funmodeActive) {
-		li.appendChild(fetchvalidscids);
-	}
 	li.appendChild(version);
+}
+
+function injectLoadingOverlay() {
+	for (let i = 0; i < overlayCSSArray.length; i++) {
+		addCSSStyle(overlayCSSArray[i]);
+	}
+
+	let overlay = document.createElement('div');
+	overlay.id = 'processingOverlay';
+	overlay.style.display = 'none';
+
+	let content = document.createElement('div');
+	content.id = 'processingOverlayContent';
+
+	var spinner = document.createElement('img');
+	spinner.src = 'https://i.gifer.com/ZKZg.gif';
+	spinner.height = 150;
+	spinner.id = 'processingOverlaySpinner';
+
+	let desc = document.createElement('div');
+	desc.id = 'processingOverlayDescription';
+	desc.innerHTML = '';
+
+	let text = document.createElement('div');
+	text.id = 'processingOverlayProgress';
+	text.innerHTML = '';
+
+	let copyButton = document.createElement('button');
+	copyButton.id = 'processingOverlayButton';
+	copyButton.title = 'Click to Copy to Clipboard';
+	copyButton.type = 'button';
+	copyButton.className = 'btn btn-default';
+	copyButton.style.display = 'none';
+	copyButton.innerHTML = 'Copy to Clipboard';
+
+
+	content.appendChild(spinner);
+	content.appendChild(desc);
+	content.appendChild(text);
+	content.appendChild(copyButton);
+
+	overlay.appendChild(content);
+
+	document.body.appendChild(overlay);
 }
 
 function injectScrollToTop() {
@@ -2619,10 +2664,6 @@ window.addEventListener('load', function () {
 			handleMoneySearchAll(searchparams);
 			return;
 		}
-		if (searchparams.get(authLogValues.storeLastSCforID) == 'true') {
-			storeLastAuthSCforID(searchparams);
-			return;
-		}
 		if (pathPlayerSearch.test(location.pathname)) {
 			initSearchButton(playerSearchSelectors, true);
 		}
@@ -2645,6 +2686,8 @@ window.addEventListener('load', function () {
 		if (punishmentSearch.test(location.pathname)) {
 			initPunishmentLogs();
 		}
+
+		injectLoadingOverlay();
 
 		// Inject Version to account menu
 		injectDropDown();
