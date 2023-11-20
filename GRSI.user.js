@@ -2581,20 +2581,6 @@ function injectPageChooser() {
 	}
 }
 
-// Data conversion, remove at some point
-function tryConvertSCMap() {
-	retiredGMStorageMaps.socialClubVerification.map = getMapFromStorage(retiredGMStorageMaps.socialClubVerification.id);
-	if (retiredGMStorageMaps.socialClubVerification.map.size > 0) {
-		window.alert("GRSI: Updating Datastructure. Please wait...\n(This message can be closed. A new message will show once done)");
-		retiredGMStorageMaps.socialClubVerification.map.forEach((value, name) => {
-			GM_setValue(scStorageIdentifier + name, JSON.stringify(value));
-			retiredGMStorageMaps.socialClubVerification.map.delete(name);
-		});
-		saveMapToStorage(retiredGMStorageMaps.socialClubVerification);
-		window.alert("Conversion to new Datastructure done.");
-	}
-}
-
 function initPunishmentLogs() {
 	var idTbl = getTableValues($(punishmentLogs.column));
 	var idtdTbl = $(punishmentLogs.column);
@@ -2696,9 +2682,6 @@ window.addEventListener('load', function () {
 
 		// Add a textbox + Go button to paginated tools
 		injectPageChooser();
-
-		// Convert Data
-		tryConvertSCMap();
 	}
 
 	if (location.hostname === hostnameRS) {
