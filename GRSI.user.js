@@ -355,6 +355,15 @@ const overlayCSSArray = [
     }",
 ]
 
+const customMarginArray = [
+	".small-margin-left { \
+	margin-left: 5px;\
+    }",
+	".small-margin-right { \
+	margin-right: 5px;\
+	}",
+]
+
 const default_colors = {
 	blue: "rgb(85, 160, 200)",
 	green: "rgb(0, 255, 0)",
@@ -612,7 +621,7 @@ function initAuthLogSearchAll() {
 	var searchAllButton = document.createElement('button');
 	searchAllButton.title = "Click to search and summarize all pages";
 	searchAllButton.type = "button";
-	searchAllButton.className = "btn btn-default";
+	searchAllButton.className = "btn btn-default small-margin-left";
 	searchAllButton.onclick = async function () {
 		var nickset = false;
 		var idset = false;
@@ -780,7 +789,7 @@ function initSearchButton(pathSelectors, button_listener) {
 	var optionsbutton = document.createElement('button');
 	optionsbutton.title = "Click to show/hide content";
 	optionsbutton.type = "button";
-	optionsbutton.className = "btn btn-default";
+	optionsbutton.className = "btn btn-default small-margin-left";
 	optionsbutton.onclick = function () {
 		if (document.getElementById('optionsspoiler').style.display == 'none') {
 			document.getElementById('optionsspoiler').style.display = '';
@@ -818,7 +827,7 @@ function initSearchButton(pathSelectors, button_listener) {
 		pageLabel.className = 'sr-only';
 		pageFormGroup.appendChild(pageLabel);
 		var pageInput = document.createElement('input');
-		pageInput.className = 'form-control';
+		pageInput.className = 'form-control small-margin-right';
 		pageInput.type = 'number';
 		pageInput.name = moneyLogSelectors.inputPage;
 		pageInput.id = moneyLogSelectors.inputPage;
@@ -835,7 +844,7 @@ function initSearchButton(pathSelectors, button_listener) {
 		var searchAllButton = document.createElement('button');
 		searchAllButton.title = "Click to search and summarize all pages";
 		searchAllButton.type = "button";
-		searchAllButton.className = "btn btn-default";
+		searchAllButton.className = "btn btn-default small-margin-left";
 		searchAllButton.onclick = function () {
 			handleMoneySearchAll();
 		};
@@ -924,7 +933,7 @@ function initFractionPage() {
 	idLabel.htmlFor = fractionSearchValues.inputID;
 	idFormGroup.appendChild(idLabel);
 	var idInput = document.createElement('input');
-	idInput.className = 'form-control';
+	idInput.className = 'form-control small-margin-left';
 	idInput.type = 'number';
 	idInput.name = fractionSearchValues.inputID;
 	idInput.id = fractionSearchValues.inputID;
@@ -944,7 +953,7 @@ function initFractionPage() {
 	pageLabel.htmlFor = fractionSearchValues.inputID;
 	pageFormGroup.appendChild(pageLabel);
 	var pageInput = document.createElement('input');
-	pageInput.className = 'form-control';
+	pageInput.className = 'form-control small-margin-left';
 	pageInput.type = 'number';
 	pageInput.name = fractionSearchValues.inputPage;
 	pageInput.id = fractionSearchValues.inputPage;
@@ -964,7 +973,7 @@ function initFractionPage() {
 	qttyLabel.htmlFor = fractionSearchValues.inputQTTY;
 	qttyFormGroup.appendChild(qttyLabel);
 	var QTTYInput = document.createElement('input');
-	QTTYInput.className = 'form-control';
+	QTTYInput.className = 'form-control small-margin-left';
 	QTTYInput.type = 'number';
 	QTTYInput.name = fractionSearchValues.inputQTTY;
 	QTTYInput.id = fractionSearchValues.inputQTTY;
@@ -983,7 +992,7 @@ function initFractionPage() {
 	filterButton.title = "Click to filter content by PlayerID and/or Quantity"
 	filterButton.innerHTML = "Filter";
 	filterButton.type = "button";
-	filterButton.className = "btn btn-default";
+	filterButton.className = "btn btn-default small-margin-left";
 	filterButton.onclick = function () {
 		handleFractionSearchEntry();
 	}
@@ -1427,7 +1436,7 @@ function redrawSCButtons(sc_fields, sc_names) {
 				+ "</a><a style='color: " + fontcolor + ";'>"
 				+ ((showSCID.value && scID) ? (" (" + scID + ")") : "")
 				+ "</a>"
-				+ ((scValidityChecked && hideButtonOnProcessedNames.value) ? "" : ((autoProcess.value && backgroundProcessButton.value) ? "<button type='button' id='bgcheckButton_" + i + "'>Check</button>" : ""));
+				+ ((scValidityChecked && hideButtonOnProcessedNames.value) ? "" : ((autoProcess.value && backgroundProcessButton.value) ? "<button type='button' class='small-margin-left' id='bgcheckButton_" + i + "'>Check</button>" : ""));
 
 			if ((autoProcess.value && backgroundProcessButton.value)) {
 				sc_buttons[i] = document.getElementById('bgcheckButton_' + i);
@@ -2682,6 +2691,10 @@ window.addEventListener('load', function () {
 
 		// Add a textbox + Go button to paginated tools
 		injectPageChooser();
+
+		for (let i = 0; i < customMarginArray.length; i++) {
+			addCSSStyle(customMarginArray[i]);
+		}
 	}
 
 	if (location.hostname === hostnameRS) {
