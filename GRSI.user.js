@@ -110,13 +110,11 @@ const authLogValues = {
 	},
 	isAuthLog: true,
 	initialSearchPage: 1,
-	tblGMPrefix: 'ACPAuthLogFilterPrefix_',
 	paginationLastPage: '#DataTables_Table_0_paginate ul li a.pagination-link',
 	active: 'authLogSearchActive',
 	levelSelector: '#header-navbar-collapse > ul > li.dropdown.dropdown-profile > a > span',
 	minimalIPLevel: 5,
 	initAuthHref: true,
-	mainTable: 'body > div.app-layout-canvas > div > main > div > div:nth-child(2) > div.card-block > table',
 	searchParams: {
 		default: 'skip',
 		nick: 'nick',
@@ -127,6 +125,7 @@ const authLogValues = {
 	},
 	ipLookup: 'https://www.ipqualityscore.com/free-ip-lookup-proxy-vpn-test/lookup/',
 	iptable: 'body > div.app-layout-canvas > div > main > div > div:nth-child(2) > div > table > tbody > tr > td:nth-child(3)',
+	lastPageSearch: 1000000,
 };
 
 const moneyLogSelectors = {
@@ -190,11 +189,7 @@ const fractionSearchValues = {
 	headerBlock: 'logsmoney_post',
 	inputID: 'fractionSearchID',
 	page: 'page',
-	inputPage: 'fractionSearchEndPage',
 	inputQTTY: 'fractionSearchQTTY',
-	active: 'fractionSearchActive',
-	mainTable: 'body > div.app-layout-canvas > div > main > div > div:nth-child(2) > div.card-block > table',
-	reverse: 'fractionSearchReverse',
 	tblSelectors: {
 		nick: 0,
 		id: 1,
@@ -204,8 +199,6 @@ const fractionSearchValues = {
 		rank: 5,
 		date: 6,
 	},
-	tblDefault: '[[],[],[],[],[],[],[]]',
-	tblGMPrefix: 'ACPFractionFilterPrefix_',
 };
 
 const punishmentLogs = {
@@ -527,9 +520,9 @@ function tableTo2DArray(table, page, skipHeader = false) {
 	return data;
 }
 
-async function getLastAuthPage(urlsearch) {
+async function getLastTablePage(urlsearch) {
 	let parser = new DOMParser();
-	urlsearch.set(authLogValues.searchParams.page, 1000000);
+	urlsearch.set(authLogValues.searchParams.page, authLogValues.lastPageSearch);
 	let url = location.origin + location.pathname + '?' + urlsearch.toString();
 	let response = await fetch(url);
 	let text = await response.text();
@@ -539,17 +532,18 @@ async function getLastAuthPage(urlsearch) {
 	return pagination.length > 0 ? pagination[pagination.length - 1].text : '1';
 }
 
-async function getFullTable(urlsearch, endpage, progressText) {
+async function getFullTable(urlsearch, endpage, progressText, startpage) {
 	let fullTableData = [];
 	let parser = new DOMParser();
 	let page = 0;
+	const progressEndPage = (endpage - startpage + 1);
 	if (progressText) {
-		progressText.innerHTML = 'Page: ' + page + '/' + endpage;
+		progressText.innerHTML = 'Page: ' + page + '/' + progressEndPage;
 	}
-	document.title = '[' + page + '/' + endpage + '] ' + originalTitle;
+	document.title = '[' + page + '/' + progressEndPage + '] ' + originalTitle;
 
-	var promises = [];
-	for (let i = 1; i <= endpage; i++) {
+	let promises = [];
+	for (let i = startpage; i <= endpage; i++) {
 		promises.push(new Promise(async (resolve, reject) => {
 			urlsearch.set(authLogValues.searchParams.page, i);
 			let url = location.origin + location.pathname + '?' + urlsearch.toString();
@@ -559,10 +553,10 @@ async function getFullTable(urlsearch, endpage, progressText) {
 			let table = doc.querySelector('.card-block table');
 			page++;
 			if (progressText) {
-				progressText.innerHTML = 'Page: ' + page + '/' + endpage;
+				progressText.innerHTML = 'Page: ' + page + '/' + progressEndPage;
 			}
-			document.title = '[' + page + '/' + endpage + '] ' + originalTitle;
-			resolve(tableTo2DArray(table, i, i > 1));
+			document.title = '[' + page + '/' + progressEndPage + '] ' + originalTitle;
+			resolve(tableTo2DArray(table, i, i !== startpage));
 		}));
 	}
 
@@ -697,9 +691,9 @@ function initAuthLogSearchAll() {
 }
 
 async function fetchAndProcessAuthData(urlsearch, compareIP, closeAfterProcess) {
-	var endpage = await getLastAuthPage(urlsearch);
+	var endpage = await getLastTablePage(urlsearch);
 	progressText = document.getElementById('currentpage');
-	var fullTable = await getFullTable(urlsearch, endpage, progressText);
+	var fullTable = await getFullTable(urlsearch, endpage, progressText, 1);
 
 	var objectTable = [];
 
@@ -753,7 +747,7 @@ async function fetchAndProcessAuthData(urlsearch, compareIP, closeAfterProcess) 
 		title = title + "SC: " + urlsearch.get(authLogValues.searchParams.sc) + " ";
 	}
 	title = title + "- ACP Auth Summary";
-	openFilterTable(filterTable, urlsearch, authLogValues, true, title, closeAfterProcess);
+	openFilterTable(filterTable, authLogValues, true, title, closeAfterProcess);
 }
 
 async function autoFetchAndProcessAuthData(urlsearch) {
@@ -997,79 +991,92 @@ function initFractionPage() {
 		handleFractionSearchEntry();
 	}
 	filterFormGroup.appendChild(filterButton);
+
+	var loading = document.createElement('img');
+	loading.src = 'https://i.gifer.com/ZKZg.gif';
+	loading.height = 38;
+	loading.id = 'loading';
+	loading.style.display = 'none';
+
+	loading.style.padding = '0px 5px';
+
+	var progress = document.createElement('a');
+	progress.id = 'currentpage';
+	progress.style.color = 'initial';
+
+	filterButton.after(loading);
+	loading.after(progress);
+
 	formBlock.appendChild(filterFormGroup);
 }
 
 function addToTable(arr, tbl, selectors, index) {
 	for (const [key, selectorValue] of Object.entries(selectors)) {
-		arr[selectorValue].push(tbl.rows.item(index).cells.item(selectorValue).textContent);
+		arr[selectorValue].push(tbl[index][selectorValue]);
 	}
 }
 
-function checkAndAddtoFractionsTable(table, filterTable, playerID, qtty, index) {
-	var tblID = parseInt(table.rows.item(index).cells.item(fractionSearchValues.tblSelectors.id).textContent);
-	var tblQTTY = parseInt(table.rows.item(index).cells.item(fractionSearchValues.tblSelectors.qtty).textContent);
-	if (tblID == playerID || tblQTTY == qtty) {
-		addToTable(filterTable, table, fractionSearchValues.tblSelectors, index);
-	}
-}
-
-function handleFractionSearchEntry(urlsearch) {
+async function handleFractionSearchEntry() {
 	var playerID, endPage, qtty;
-	if (urlsearch == null) {
-		urlsearch = new URLSearchParams(location.search);
-		playerID = parseInt(document.getElementById(fractionSearchValues.inputID).value);
-		endPage = parseInt(document.getElementById(fractionSearchValues.inputPage).value);
-		qtty = parseInt(document.getElementById(fractionSearchValues.inputQTTY).value);
-		urlsearch.set(fractionSearchValues.inputID, playerID);
-		urlsearch.set(fractionSearchValues.inputPage, endPage);
-		urlsearch.set(fractionSearchValues.inputQTTY, qtty);
-		GM_deleteValue(fractionSearchValues.tblGMPrefix + playerID + "_" + qtty);
-	} else {
-		playerID = parseInt(urlsearch.get(fractionSearchValues.inputID));
-		endPage = parseInt(urlsearch.get(fractionSearchValues.inputPage));
-		qtty = parseInt(urlsearch.get(fractionSearchValues.inputQTTY));
-	}
+	playerID = parseInt(document.getElementById(fractionSearchValues.inputID).value);
+	endPage = parseInt(document.getElementById(fractionSearchValues.inputPage).value);
+	qtty = parseInt(document.getElementById(fractionSearchValues.inputQTTY).value);
+	var urlsearch = new URLSearchParams(location.search);
 
 	if ((isNaN(playerID) && isNaN(qtty)) || isNaN(endPage)) {
 		window.alert("Please specify PlayerID as well as the last page to check (starting from current)");
 	} else {
-		urlsearch.set(fractionSearchValues.active, "true");
+		document.getElementById('loading').style.display = '';
+		progressText = document.getElementById('currentpage');
+		progressText.innerHTML = 'Page: 0/' + endPage;
+		document.title = '[0/' + endPage + '] ' + originalTitle;
 		var page = parseInt(urlsearch.get(fractionSearchValues.page));
 		if (isNaN(page)) {
 			page = 1;
+			urlsearch.set(fractionSearchValues.page, page);
 		}
-		if (page < endPage) {
-			urlsearch.set(fractionSearchValues.page, page + 1);
-			urlsearch.delete(fractionSearchValues.reverse);
-		} else if (page > endPage) {
-			urlsearch.set(fractionSearchValues.page, page - 1);
-			urlsearch.set(fractionSearchValues.reverse, "true");
-		}
-		var filterTable = JSON.parse(GM_getValue(fractionSearchValues.tblGMPrefix + playerID + "_" + qtty, fractionSearchValues.tblDefault));
-		var table = $(fractionSearchValues.mainTable)[0];
-		if (filterTable[0].length == 0 && table.rows.length > 0) {
-			// Add Headlines once
-			addToTable(filterTable, table, fractionSearchValues.tblSelectors, 0);
-		}
-		if (urlsearch.get(fractionSearchValues.reverse) === "true") {
-			for (let i = (table.rows.length - 1); i > 0; i--) {
-				checkAndAddtoFractionsTable(table, filterTable, playerID, qtty, i);
-			}
-		} else {
-			for (let i = 1; i < table.rows.length; i++) {
-				checkAndAddtoFractionsTable(table, filterTable, playerID, qtty, i);
+
+		if (endPage > 100) {
+			let maxEndPage = await getLastTablePage(urlsearch);
+			let maxEndPageInt = parseInt(maxEndPage);
+			if (endPage > maxEndPageInt) {
+				endPage = maxEndPageInt;
 			}
 		}
 
-		if (page == endPage) {
-			urlsearch.delete(fractionSearchValues.active);
-			openFilterTable(filterTable, urlsearch, fractionSearchValues);
-			GM_deleteValue(fractionSearchValues.tblGMPrefix + playerID + "_" + qtty);
-			return;
+		if (page > endPage) {
+			var tmp = page;
+			page = endPage;
+			endPage = tmp;
 		}
-		GM_setValue(fractionSearchValues.tblGMPrefix + playerID + "_" + qtty, JSON.stringify(filterTable));
-		openPaginationPage(urlsearch);
+		var filterTable = [[], [], [], [], [], [], []];
+
+		var fullTable = await getFullTable(urlsearch, endPage, progressText, page);
+
+		addToTable(filterTable, fullTable, fractionSearchValues.tblSelectors, 0);
+
+		for (let i = 1; i < fullTable.length; i++) {
+			var tblID = parseInt(fullTable[i][fractionSearchValues.tblSelectors.id]);
+			var tblQTTY = parseInt(fullTable[i][fractionSearchValues.tblSelectors.qtty]);
+			if (tblID == playerID || tblQTTY == qtty) {
+				addToTable(filterTable, fullTable, fractionSearchValues.tblSelectors, i);
+			}
+		}
+
+		var title = '';
+		if (!isNaN(playerID)) {
+			title = title + "ID: " + playerID + " ";
+		}
+		if (!isNaN(qtty)) {
+			title = title + "QTTY: " + qtty + " ";
+		}
+		title = title + "- ACP Orga Summary";
+
+		openFilterTable(filterTable, fractionSearchValues, false, title, false);
+
+		document.getElementById('loading').style.display = 'none';
+		document.title = '[Done] ' + originalTitle;
+		progressText.innerHTML = '';
 	}
 }
 
@@ -1110,7 +1117,7 @@ function getAuthCellContent(filterTable, selector, j, i) {
 	return a;
 }
 
-function openFilterTable(filterTable, urlsearch, values, textsummary, title, closeAfterProcess = false) {
+function openFilterTable(filterTable, values, textsummary, title, closeAfterProcess = false) {
 	var tbl = document.createElement('table'),
 		header = tbl.createTHead();
 	tbl.width = "90%";
@@ -2649,10 +2656,6 @@ window.addEventListener('load', function () {
 		var searchparams = new URLSearchParams(location.search);
 		if (searchparams.get(binarySearchValues.active) == 'true') {
 			openPaginationPage(getInitialRangeSearch());
-			return;
-		}
-		if (searchparams.get(fractionSearchValues.active) == 'true') {
-			handleFractionSearchEntry(searchparams);
 			return;
 		}
 		if (searchparams.get(moneyLogSelectors.active) == 'true') {
