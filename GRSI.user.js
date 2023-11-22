@@ -129,7 +129,6 @@ const authLogValues = {
 };
 
 const moneyLogSelectors = {
-	active: 'moneySearchActive',
 	count: 'body > div.app-layout-canvas > div > main > div > div.row > div',
 	header: 'body > div.app-layout-canvas > div > main > div > div:nth-child(2) > div > table > thead > tr > th:nth-child(4)',
 	nametable: 'body > div.app-layout-canvas > div > main > div > div:nth-child(2) > div > table > tbody > tr > td:nth-child(1) > a',
@@ -149,7 +148,6 @@ const moneyLogSelectors = {
 		ip: 'ip',
 		desc: 'description',
 		page: 'page',
-		endpage: 'endpage',
 		default: 'skip',
 	},
 	inputFieldIDs: {
@@ -157,6 +155,15 @@ const moneyLogSelectors = {
 		id: 'number-account',
 		ip: 'ip',
 		desc: 'description',
+	},
+	tblFields: {
+		nick: 0,
+		date: 1,
+		ip: 2,
+		qtty: 3,
+		cash: 4,
+		bank: 5,
+		desc: 6,
 	},
 	isMoneyLog: true,
 };
@@ -512,7 +519,7 @@ function tableTo2DArray(table, page, skipHeader = false) {
 		let row = table.rows[i];
 		let rowData = [];
 		for (let cell of row.cells) {
-			rowData.push(cell.textContent);
+			rowData.push(cell);
 		}
 		rowData.push(page.toString());
 		data.push(rowData);
@@ -604,7 +611,7 @@ async function getSCforIDTable(ids, progressText) {
 
 	await Promise.all(promises).then((results) => {
 		results.forEach((element) => {
-			fullTableData.push(element.length > 1 ? element[1][authLogValues.tblSelectors.sc] : '');
+			fullTableData.push(element.length > 1 ? element[1][authLogValues.tblSelectors.sc].textContent : '');
 		})
 	});
 
@@ -699,11 +706,11 @@ async function fetchAndProcessAuthData(urlsearch, compareIP, closeAfterProcess) 
 
 	for (let i = (fullTable.length - 1); i > 0; i--) {
 		var entry = {};
-		entry.nick = fullTable[i][authLogValues.tblSelectors.nick];
-		entry.id = fullTable[i][authLogValues.tblSelectors.id];
-		entry.ip = fullTable[i][authLogValues.tblSelectors.ip];
-		entry.sc = fullTable[i][authLogValues.tblSelectors.sc];
-		entry.date = fullTable[i][authLogValues.tblSelectors.date];
+		entry.nick = fullTable[i][authLogValues.tblSelectors.nick].textContent;
+		entry.id = fullTable[i][authLogValues.tblSelectors.id].textContent;
+		entry.ip = fullTable[i][authLogValues.tblSelectors.ip].textContent;
+		entry.sc = fullTable[i][authLogValues.tblSelectors.sc].textContent;
+		entry.date = fullTable[i][authLogValues.tblSelectors.date].textContent;
 		entry.firstpage = fullTable[i][authLogValues.tblSelectors.page];
 		entry.loginAmount = 1;
 
@@ -717,11 +724,11 @@ async function fetchAndProcessAuthData(urlsearch, compareIP, closeAfterProcess) 
 
 	// Convert objectTable to filterTable
 	var filterTable = [[], [], [], [], []];
-	filterTable[authLogValues.tblSelectors.nick].push(fullTable[0][authLogValues.tblSelectors.nick]);
-	filterTable[authLogValues.tblSelectors.id].push(fullTable[0][authLogValues.tblSelectors.id]);
-	filterTable[authLogValues.tblSelectors.ip].push(fullTable[0][authLogValues.tblSelectors.ip]);
-	filterTable[authLogValues.tblSelectors.sc].push(fullTable[0][authLogValues.tblSelectors.sc]);
-	filterTable[authLogValues.tblSelectors.date].push(fullTable[0][authLogValues.tblSelectors.date]);
+	filterTable[authLogValues.tblSelectors.nick].push(fullTable[0][authLogValues.tblSelectors.nick].textContent);
+	filterTable[authLogValues.tblSelectors.id].push(fullTable[0][authLogValues.tblSelectors.id].textContent);
+	filterTable[authLogValues.tblSelectors.ip].push(fullTable[0][authLogValues.tblSelectors.ip].textContent);
+	filterTable[authLogValues.tblSelectors.sc].push(fullTable[0][authLogValues.tblSelectors.sc].textContent);
+	filterTable[authLogValues.tblSelectors.date].push(fullTable[0][authLogValues.tblSelectors.date].textContent);
 
 	for (var i = 0; i < objectTable.length; i++) {
 		filterTable[authLogValues.tblSelectors.nick].push(objectTable[i].nick);
@@ -796,22 +803,7 @@ function initSearchButton(pathSelectors, button_listener) {
 	if (pathSelectors.isAuthLog) {
 		var searchAllButton = initAuthLogSearchAll();
 		search_button.after(searchAllButton);
-
-		var loading = document.createElement('img');
-		loading.src = 'https://i.gifer.com/ZKZg.gif';
-		loading.height = 38;
-		loading.id = 'loading';
-		loading.style.display = 'none';
-
-		loading.style.padding = '0px 5px';
-
-		var progress = document.createElement('a');
-		progress.id = 'currentpage';
-		progress.style.color = 'initial';
-
 		searchAllButton.after(optionsbutton);
-		optionsbutton.after(loading);
-		loading.after(progress);
 	} else if (pathSelectors.isMoneyLog) {
 		var formBlock = document.getElementById(moneyLogSelectors.headerBlock);
 		var buttonBlock = document.querySelector(moneyLogSelectors.buttonBlock);
@@ -857,7 +849,21 @@ function initSearchButton(pathSelectors, button_listener) {
 	optionsspoiler.style = "display:none";
 	optionsspoiler.innerHTML = optionSpoilerTypes[pathSelectors.type];
 
+	var loading = document.createElement('img');
+	loading.src = 'https://i.gifer.com/ZKZg.gif';
+	loading.height = 38;
+	loading.id = 'loading';
+	loading.style.display = 'none';
+
+	loading.style.padding = '0px 5px';
+
+	var progress = document.createElement('a');
+	progress.id = 'currentpage';
+	progress.style.color = 'initial';
+
 	optionsbutton.after(optionsspoiler);
+	optionsspoiler.after(loading);
+	loading.after(progress);
 
 	if (pathSelectors.type == _selectorTypes.socialclub) {
 		initSCOptionsBoxes();
@@ -1012,52 +1018,52 @@ function initFractionPage() {
 
 function addToTable(arr, tbl, selectors, index) {
 	for (const [key, selectorValue] of Object.entries(selectors)) {
-		arr[selectorValue].push(tbl[index][selectorValue]);
+		arr[selectorValue].push(tbl[index][selectorValue].textContent);
 	}
 }
 
 async function handleFractionSearchEntry() {
-	var playerID, endPage, qtty;
+	var playerID, endpage, qtty;
 	playerID = parseInt(document.getElementById(fractionSearchValues.inputID).value);
-	endPage = parseInt(document.getElementById(fractionSearchValues.inputPage).value);
+	endpage = parseInt(document.getElementById(fractionSearchValues.inputPage).value);
 	qtty = parseInt(document.getElementById(fractionSearchValues.inputQTTY).value);
 	var urlsearch = new URLSearchParams(location.search);
 
-	if ((isNaN(playerID) && isNaN(qtty)) || isNaN(endPage)) {
+	if ((isNaN(playerID) && isNaN(qtty)) || isNaN(endpage)) {
 		window.alert("Please specify PlayerID as well as the last page to check (starting from current)");
 	} else {
 		document.getElementById('loading').style.display = '';
-		progressText = document.getElementById('currentpage');
-		progressText.innerHTML = 'Page: 0/' + endPage;
-		document.title = '[0/' + endPage + '] ' + originalTitle;
+		let progressText = document.getElementById('currentpage');
+		progressText.innerHTML = 'Page: 0/' + endpage;
+		document.title = '[0/' + endpage + '] ' + originalTitle;
 		var page = parseInt(urlsearch.get(fractionSearchValues.page));
 		if (isNaN(page)) {
 			page = 1;
 			urlsearch.set(fractionSearchValues.page, page);
 		}
 
-		if (endPage > 100) {
+		if (endpage > 100) {
 			let maxEndPage = await getLastTablePage(urlsearch);
 			let maxEndPageInt = parseInt(maxEndPage);
-			if (endPage > maxEndPageInt) {
-				endPage = maxEndPageInt;
+			if (endpage > maxEndPageInt) {
+				endpage = maxEndPageInt;
 			}
 		}
 
-		if (page > endPage) {
+		if (page > endpage) {
 			var tmp = page;
-			page = endPage;
-			endPage = tmp;
+			page = endpage;
+			endpage = tmp;
 		}
 		var filterTable = [[], [], [], [], [], [], []];
 
-		var fullTable = await getFullTable(urlsearch, endPage, progressText, page);
+		var fullTable = await getFullTable(urlsearch, endpage, progressText, page);
 
 		addToTable(filterTable, fullTable, fractionSearchValues.tblSelectors, 0);
 
 		for (let i = 1; i < fullTable.length; i++) {
-			var tblID = parseInt(fullTable[i][fractionSearchValues.tblSelectors.id]);
-			var tblQTTY = parseInt(fullTable[i][fractionSearchValues.tblSelectors.qtty]);
+			var tblID = parseInt(fullTable[i][fractionSearchValues.tblSelectors.id].textContent);
+			var tblQTTY = parseInt(fullTable[i][fractionSearchValues.tblSelectors.qtty].textContent);
 			if (tblID == playerID || tblQTTY == qtty) {
 				addToTable(filterTable, fullTable, fractionSearchValues.tblSelectors, i);
 			}
@@ -1624,120 +1630,121 @@ function initSCButtons(sc_fields, sc_names, pathSelectors) {
 	redrawSCButtons(sc_fields, sc_names);
 }
 
-function getMoneyTable() {
-	var tables = {};
-	tables.nameField = $(moneyLogSelectors.nametable);
-	tables.dateText = getTableValues($(moneyLogSelectors.datetable));
-	tables.qtty = $(moneyLogSelectors.qttytable);
-
-	tables.qttyText = getTableValues(tables.qtty);
-	tables.qttyValue = [];
-
-	for (var i = 0; i < tables.qttyText.length; i++) {
-		tables.qttyValue[i] = { value: parseInt(tables.qttyText[i].replace(/^\D+/g, '')), outgoing: tables.qttyText[i].startsWith('-') };
+function getMoneyTable(fullTable) {
+	var objTables = {
+		nameField: [],
+		playerID: [],
+		dateText: [],
+		qttyText: [],
+		qttyValue: [],
 	}
 
-	return tables;
+	for (i = 1; i < fullTable.length; i++) {
+		objTables.nameField.push(fullTable[i][moneyLogSelectors.tblFields.nick].textContent);
+		var hrefSplit = fullTable[i][moneyLogSelectors.tblFields.nick].children[0].href.split('/');
+		objTables.playerID.push(hrefSplit[hrefSplit.length - 1]);
+		objTables.dateText.push(fullTable[i][moneyLogSelectors.tblFields.date].textContent);
+		objTables.qttyText.push(fullTable[i][moneyLogSelectors.tblFields.qtty].textContent);
+
+		objTables.qttyValue.push({ value: parseInt(fullTable[i][moneyLogSelectors.tblFields.qtty].textContent.replace(/^\D+/g, '')), outgoing: fullTable[i][moneyLogSelectors.tblFields.qtty].textContent.startsWith('-') });
+	}
+	return objTables;
 }
 
-function handleMoneySearchAll(urlsearch) {
+async function handleMoneySearchAll() {
 	var nickname, id, ip, desc, endpage;
-	if (urlsearch == null) {
-		urlsearch = new URLSearchParams(location.search);
-		var nickset = false;
-		var idset = false;
-		var ipset = false;
-		var descset = false;
-		nickname = document.getElementById(moneyLogSelectors.inputFieldIDs.nick).value;
-		if (nickname.length == 0) {
-			nickname = moneyLogSelectors.searchParams.default;
-		} else {
-			nickset = true;
-		}
-
-		var id = document.getElementById(moneyLogSelectors.inputFieldIDs.id).value;
-		if (id.length == 0) {
-			id = moneyLogSelectors.searchParams.default;
-		} else {
-			idset = true;
-		}
-
-		var ip = document.getElementById(moneyLogSelectors.inputFieldIDs.ip).value;
-		if (ip.length == 0) {
-			ip = moneyLogSelectors.searchParams.default;
-		} else {
-			ipset = true;
-		}
-
-		var desc = document.getElementById(moneyLogSelectors.inputFieldIDs.desc).value;
-		if (desc.length == 0) {
-			desc = moneyLogSelectors.searchParams.default;
-		} else {
-			descset = true;
-		}
-
-		var endpage = parseInt(document.getElementById(moneyLogSelectors.inputPage).value);
-		if ((nickset || idset || ipset || descset) && !isNaN(endpage)) {
-			if (window.confirm(
-				"Do you want to summarize all pages with the following parameters?\n"
-				+ (nickset ? ("Nickname: " + nickname + "\n") : "")
-				+ (idset ? ("Account ID: " + id + "\n") : "")
-				+ (ipset ? ("IP: " + ip + "\n") : "")
-				+ (descset ? ("To/From whom: " + desc + "\n") : "")
-				+ ("Endpage: " + endpage + "\n")
-			)) {
-				gmStorageMaps.playerMapPagesSum.map = deleteMapIDFromStorage(gmStorageMaps.playerMapPagesSum.id);
-
-				var urlsearch = new URLSearchParams(location.search);
-				urlsearch.set(moneyLogSelectors.searchParams.nick, nickname);
-				urlsearch.set(moneyLogSelectors.searchParams.id, id);
-				urlsearch.set(moneyLogSelectors.searchParams.ip, ip);
-				urlsearch.set(moneyLogSelectors.searchParams.desc, desc);
-				urlsearch.set(moneyLogSelectors.searchParams.endpage, endpage);
-
-				var page = parseInt(urlsearch.get(moneyLogSelectors.searchParams.page));
-				if (isNaN(page)) {
-					page = 1;
-				}
-
-				urlsearch.set(moneyLogSelectors.searchParams.page, page);
-
-				if (page == endpage) {
-					window.alert("Startpage is equal to Endpage!");
-					return;
-				}
-				urlsearch.set(moneyLogSelectors.active, "true");
-
-				openPaginationPage(urlsearch);
-			}
-		} else {
-			window.alert("Search Parameters or End Page specified!");
-		}
+	var nickset = false;
+	var idset = false;
+	var ipset = false;
+	var descset = false;
+	nickname = document.getElementById(moneyLogSelectors.inputFieldIDs.nick).value;
+	if (nickname.length == 0) {
+		nickname = moneyLogSelectors.searchParams.default;
 	} else {
-		if (urlsearch.get(moneyLogSelectors.active) == 'true') {
-			var page = parseInt(urlsearch.get(moneyLogSelectors.searchParams.page));
-			var endpage = parseInt(urlsearch.get(moneyLogSelectors.searchParams.endpage));
-			if (page < endpage) {
-				urlsearch.set(moneyLogSelectors.searchParams.page, page + 1);
-			} else if (page > endpage) {
-				urlsearch.set(moneyLogSelectors.searchParams.page, page - 1);
-			} else {
-				// Open Window, return, reload
-				openDailyTotalTable(getTrimmedDatePlayerData(addToDailySumMap(getMoneyTable()).map));
-
-				urlsearch.delete(moneyLogSelectors.active);
-
-				openPaginationPage(urlsearch);
-			}
-
-			addToDailySumMap(getMoneyTable());
-
-			openPaginationPage(urlsearch);
-		} else {
-			window.alert("Something went wrong");
-		}
+		nickset = true;
 	}
 
+	var id = document.getElementById(moneyLogSelectors.inputFieldIDs.id).value;
+	if (id.length == 0) {
+		id = moneyLogSelectors.searchParams.default;
+	} else {
+		idset = true;
+	}
+
+	var ip = document.getElementById(moneyLogSelectors.inputFieldIDs.ip).value;
+	if (ip.length == 0) {
+		ip = moneyLogSelectors.searchParams.default;
+	} else {
+		ipset = true;
+	}
+
+	var desc = document.getElementById(moneyLogSelectors.inputFieldIDs.desc).value;
+	if (desc.length == 0) {
+		desc = moneyLogSelectors.searchParams.default;
+	} else {
+		descset = true;
+	}
+
+	var endpage = parseInt(document.getElementById(moneyLogSelectors.inputPage).value);
+
+	if ((nickset || idset || ipset || descset) && !isNaN(endpage)) {
+		if (window.confirm(
+			"Do you want to summarize all pages with the following parameters?\n"
+			+ (nickset ? ("Nickname: " + nickname + "\n") : "")
+			+ (idset ? ("Account ID: " + id + "\n") : "")
+			+ (ipset ? ("IP: " + ip + "\n") : "")
+			+ (descset ? ("To/From whom: " + desc + "\n") : "")
+			+ ("Endpage: " + endpage + "\n")
+		)) {
+			document.getElementById('loading').style.display = '';
+			let progressText = document.getElementById('currentpage');
+			progressText.innerHTML = 'Page: 0/' + endpage;
+			document.title = '[0/' + endpage + '] ' + originalTitle;
+
+			var urlsearch = new URLSearchParams(location.search);
+			urlsearch.set(moneyLogSelectors.searchParams.nick, nickname);
+			urlsearch.set(moneyLogSelectors.searchParams.id, id);
+			urlsearch.set(moneyLogSelectors.searchParams.ip, ip);
+			urlsearch.set(moneyLogSelectors.searchParams.desc, desc);
+
+			var page = parseInt(urlsearch.get(moneyLogSelectors.searchParams.page));
+			if (isNaN(page)) {
+				page = 1;
+			}
+
+			let maxEndPage = await getLastTablePage(urlsearch);
+			let maxEndPageInt = parseInt(maxEndPage);
+			if (endpage > maxEndPageInt) {
+				endpage = maxEndPageInt;
+			}
+
+			if (page > endpage) {
+				var tmp = page;
+				page = endpage;
+				endpage = tmp;
+			}
+
+			urlsearch.set(moneyLogSelectors.searchParams.page, page);
+
+			if (page == endpage) {
+				window.alert("Startpage is equal to Endpage!");
+				openPaginationPage(urlsearch);
+				return;
+			}
+
+			var fullTable = await getFullTable(urlsearch, endpage, progressText, page);
+
+			var dailySumTable = addToDailySumMap(getMoneyTable(fullTable));
+
+			openDailyTotalTable(getTrimmedDatePlayerData(dailySumTable.sum), dailySumTable.names);
+
+			document.getElementById('loading').style.display = 'none';
+			document.title = '[Done] ' + originalTitle;
+			progressText.innerHTML = '';
+		}
+	} else {
+		window.alert("Search Parameters or End Page specified!");
+	}
 }
 
 function initMoneyFields(tables, pathSelectors) {
@@ -1803,16 +1810,18 @@ function getTrimmedDatePlayerData(untrimmedPlayerMap) {
 }
 
 function addToDailySumMap(tables) {
-	for (var i = 0; i < tables.qtty.length; i++) {
-		var hrefSplit = tables.nameField[i].href.split('/');
-		var playerID = tables.nameField[i].text + " (" + hrefSplit[hrefSplit.length - 1] + ")";
+	var playerMapPagesSum = new Map();
+	var playerIDNameMap = new Map();
+	for (var i = 0; i < tables.nameField.length; i++) {
+		var playerID = tables.playerID[i];
+		playerIDNameMap.set(playerID, tables.nameField[i]);
 		var date = tables.dateText[i];
 		var qtty = tables.qttyValue[i].value;
 		const isOutgoing = tables.qttyValue[i].outgoing;
 		var todayBal = isOutgoing ? { incoming: 0, outgoing: qtty } : { incoming: qtty, outgoing: 0 };
 		var playerDateMap = new Map();
-		if (gmStorageMaps.playerMapPagesSum.map.has(playerID)) {
-			playerDateMap = gmStorageMaps.playerMapPagesSum.map.get(playerID);
+		if (playerMapPagesSum.has(playerID)) {
+			playerDateMap = playerMapPagesSum.get(playerID);
 			if (playerDateMap.has(date)) {
 				// Assume that there's only one transfer per Second per Player
 				// Overwrite whatever value is there already (which should always be zero)
@@ -1821,12 +1830,12 @@ function addToDailySumMap(tables) {
 			}
 		}
 		playerDateMap.set(date, todayBal);
-		gmStorageMaps.playerMapPagesSum.map.set(playerID, playerDateMap);
+		playerMapPagesSum.set(playerID, playerDateMap);
 	}
-	return saveMapToStorage(gmStorageMaps.playerMapPagesSum);
+	return { sum: playerMapPagesSum, names: playerIDNameMap };
 }
 
-function openDailyTotalTable(moneyData) {
+function openDailyTotalTable(moneyData, playerIDNameMap) {
 	var tbl = document.createElement('table'),
 		header = tbl.createTHead();
 	tbl.width = "90%";
@@ -1850,10 +1859,10 @@ function openDailyTotalTable(moneyData) {
 		cell.style.padding = "10px";
 	}
 
-	moneyData.playerMap.forEach((player, playerName) => {
+	moneyData.playerMap.forEach((player, playerID) => {
 		const tr = tbl.insertRow();
 		var cell = tr.insertCell();
-		cell.innerHTML = "<b>" + playerName + "</b>";
+		cell.innerHTML = "<b>" + playerIDNameMap.get(playerID) + " (" + playerID + ")</b>";
 		cell.style.border = '1px solid #ddd';
 		cell.style.padding = "10px";
 		for (let j = 0; j < moneyData.allDates.length; j++) {
@@ -2656,10 +2665,6 @@ window.addEventListener('load', function () {
 		var searchparams = new URLSearchParams(location.search);
 		if (searchparams.get(binarySearchValues.active) == 'true') {
 			openPaginationPage(getInitialRangeSearch());
-			return;
-		}
-		if (searchparams.get(moneyLogSelectors.active) == 'true') {
-			handleMoneySearchAll(searchparams);
 			return;
 		}
 		if (pathPlayerSearch.test(location.pathname)) {
