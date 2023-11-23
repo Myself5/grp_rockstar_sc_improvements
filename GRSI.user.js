@@ -39,19 +39,7 @@ const gmStorageMaps = {
 		id: 'configOptions',
 		map: getMapFromStorage('configOptions'),
 	},
-	playerMapPagesSum: {
-		id: 'playerMapPagesSum',
-		map: getMapFromStorage('playerMapPagesSum'),
-	},
 };
-
-// Old Data format
-const retiredGMStorageMaps = {
-	socialClubVerification: {
-		id: 'socialClubVerification',
-		map: getMapFromStorage('socialClubVerification'),
-	}
-}
 
 const scValueTypes = {
 	valid: 'valid',
@@ -449,11 +437,6 @@ function saveMapToStorage(map) {
 		map.map = new Map();
 	}
 	return map;
-}
-
-function deleteMapIDFromStorage(mapid) {
-	GM_deleteValue(mapid);
-	return new Map();
 }
 
 function addCSSStyle(css) {
@@ -1726,12 +1709,6 @@ async function handleMoneySearchAll() {
 
 			urlsearch.set(moneyLogSelectors.searchParams.page, page);
 
-			if (page == endpage) {
-				window.alert("Startpage is equal to Endpage!");
-				openPaginationPage(urlsearch);
-				return;
-			}
-
 			var fullTable = await getFullTable(urlsearch, endpage, progressText, page);
 
 			var dailySumTable = addToDailySumMap(getMoneyTable(fullTable));
@@ -1743,7 +1720,7 @@ async function handleMoneySearchAll() {
 			progressText.innerHTML = '';
 		}
 	} else {
-		window.alert("Search Parameters or End Page specified!");
+		window.alert("Search Parameters or End Page not specified!");
 	}
 }
 
@@ -1757,30 +1734,6 @@ function initMoneyFields(tables, pathSelectors) {
 
 	acpTableCount = $(pathSelectors.count).text().toLowerCase() + ".";
 	$(pathSelectors.count).append(".");
-
-	$(pathSelectors.header)[0].innerHTML = "Quantity  <button type='button' id='resetSumMoneyButton'>Reset</button> <button type='button' id='addToSumMoneyButton'>Add</button> <button type='button' id='sumMoneyButton'>Show</button>";
-	const resetSumTableButton = document.getElementById('resetSumMoneyButton');
-	const addToSumMoneyButton = document.getElementById('addToSumMoneyButton');
-	const sumMoneyButton = document.getElementById('sumMoneyButton');
-	if (resetSumTableButton != null) {
-		resetSumTableButton.addEventListener("click", function () {
-			if (confirm(("Really reset summary?"))) {
-				gmStorageMaps.playerMapPagesSum.map = deleteMapIDFromStorage(gmStorageMaps.playerMapPagesSum.id);
-				addToSumMoneyButton.style.visibility = 'visible';
-			}
-		}, false);
-	}
-	if (addToSumMoneyButton != null) {
-		addToSumMoneyButton.addEventListener("click", function () {
-			addToDailySumMap(tables);
-			addToSumMoneyButton.style.visibility = 'hidden';
-		}, false);
-	}
-	if (sumMoneyButton != null) {
-		sumMoneyButton.addEventListener("click", function () {
-			openDailyTotalTable(getTrimmedDatePlayerData(addToDailySumMap(tables).map));
-		}, false);
-	}
 
 	redrawMoneyFields(tables);
 }
