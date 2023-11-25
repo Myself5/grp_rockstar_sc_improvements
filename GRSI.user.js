@@ -48,14 +48,12 @@ const scValueTypes = {
 	scid: 'scid',
 }
 
-const binarySearchValues = {
-	initialRangeFound: 'binarySearch_initialRangeFound',
-	l: 'binarySearch_Left',
-	r: 'binarySearch_Right',
+var binarySearchValues = {
 	page: 'page',
 	active: 'binarySearch_Active',
 	search: 'binarySearch_Search',
-	initialSteps: 1000
+	initialSteps: 1000,
+	firstPageFound: false,
 }
 
 // ACP Variables
@@ -2398,130 +2396,16 @@ function isSameDate(first, second) {
 		first.getMonth() === second.getMonth() &&
 		first.getDate() === second.getDate();
 
-	if (first.getHours() != 0 || first.getMinutes() != 0) {
+	if (first.getHours() != 0 || first.getMinutes() != 0 || first.getSeconds() != 0) {
 		sameDay = sameDay && first.getHours() === second.getHours();
-		if (first.getMinutes() != 0) {
+		if (first.getMinutes() != 0 || first.getSeconds() != 0) {
 			sameDay = sameDay && first.getMinutes() === second.getMinutes();
+			if (first.getSeconds() != 0) {
+				sameDay = sameDay && first.getSeconds() === second.getSeconds();
+			}
 		}
 	}
 	return sameDay;
-}
-
-function processDatesFromPage(x) {
-	var dateNewerThanPage = false;
-	var dateOlderThanPage = false;
-
-	var dates;
-	var hdrs = $('body > div.app-layout-canvas > div > main > div > div:nth-child(2) > div > table > thead > tr')[0].children;
-	for (let i = 0; i < hdrs.length; i++) {
-		if (hdrs[i].textContent === "Date") {
-			dates = getTableValues($('body > div.app-layout-canvas > div > main > div > div:nth-child(2) > div > table > tbody > tr > td:nth-child(' + (i + 1) + ')'));
-			break;
-		}
-	}
-
-	for (let i = 0; i < dates.length; i++) {
-		var compareDate = new Date(dates[i]);
-		if (isSameDate(x, compareDate)) {
-			dateNewerThanPage = true;
-			dateOlderThanPage = true;
-			break;
-		}
-		if (x > compareDate) {
-			dateNewerThanPage = true;
-		}
-		if (x < compareDate) {
-			dateOlderThanPage = true;
-		}
-	}
-
-	if (dateNewerThanPage && dateOlderThanPage)
-		return 0;
-	if (dateOlderThanPage)
-		return -1;
-
-	// if the page is empty we can assume the date is newer
-	// This should therefore be the default return
-	return 1;
-}
-
-function getInitialRangeSearch(urlsearch) {
-	if (urlsearch == null) {
-		urlsearch = new URLSearchParams(location.search);
-	}
-	urlsearch.set(binarySearchValues.active, "true");
-	var initialRangeFound = urlsearch.get(binarySearchValues.initialRangeFound) === "true";
-	var l = parseInt(urlsearch.get(binarySearchValues.l));
-	var r = parseInt(urlsearch.get(binarySearchValues.r));
-	if (isNaN(l) || isNaN(r)) {
-		l = 1;
-		r = binarySearchValues.initialSteps;
-		urlsearch.set(binarySearchValues.l, l);
-		urlsearch.set(binarySearchValues.r, r);
-	}
-	var x = new Date(urlsearch.get(binarySearchValues.search));
-	if (initialRangeFound) {
-		binarySearch(urlsearch);
-		return;
-	}
-	var currentPage = parseInt(urlsearch.get(binarySearchValues.page));
-	if (isNaN(currentPage) || currentPage != r) {
-		urlsearch.set(binarySearchValues.page, r);
-	} else {
-		switch (processDatesFromPage(x)) {
-			case 0:
-				// Found the Page
-				urlsearch.delete(binarySearchValues.active);
-				break;
-			case 1:
-				urlsearch.set(binarySearchValues.initialRangeFound, "true");
-				var mid = l + Math.floor((r - l) / 2);
-				urlsearch.set(binarySearchValues.page, mid);
-				break;
-			case -1:
-				l += binarySearchValues.initialSteps;
-				r += binarySearchValues.initialSteps;
-				urlsearch.set(binarySearchValues.l, l);
-				urlsearch.set(binarySearchValues.r, r);
-				urlsearch.set(binarySearchValues.page, r);
-				break;
-		}
-	}
-	return urlsearch;
-}
-
-function binarySearch(urlsearch) {
-	var l = parseInt(urlsearch.get(binarySearchValues.l));
-	var r = parseInt(urlsearch.get(binarySearchValues.r));
-	var x = new Date(urlsearch.get(binarySearchValues.search));
-	var currentPage = parseInt(urlsearch.get(binarySearchValues.page));
-
-	if (r >= l) {
-		switch (processDatesFromPage(x)) {
-			case 0:
-				urlsearch.delete(binarySearchValues.active);
-				openPaginationPage(urlsearch);
-				return;
-			case 1:
-				r = currentPage - 1;
-				urlsearch.set(binarySearchValues.r, r);
-				break;
-			case -1:
-				l = currentPage + 1;
-				urlsearch.set(binarySearchValues.l, l);
-				break;
-		}
-
-		let mid = l + Math.floor((r - l) / 2);
-		urlsearch.set(binarySearchValues.page, mid);
-		openPaginationPage(urlsearch);
-		return;
-	} else {
-		urlsearch.set(binarySearchValues.page, l);
-	}
-
-	urlsearch.delete(binarySearchValues.active);
-	openPaginationPage(urlsearch);
 }
 
 function injectPageChooser() {
@@ -2562,11 +2446,8 @@ function injectPageChooser() {
 					+ "\n(The Tab will continue to reload until the search is done)")) {
 					var urlsearch = new URLSearchParams(location.search);
 					urlsearch.set(binarySearchValues.search, datechooser.value);
-					urlsearch.delete(binarySearchValues.l);
-					urlsearch.delete(binarySearchValues.r);
-					urlsearch.delete(binarySearchValues.active);
-					urlsearch.delete(binarySearchValues.initialRangeFound);
-					openPaginationPage(getInitialRangeSearch(urlsearch));
+					binarySearchValues.firstPageFound = false;
+					binarySearch(urlsearch);
 				}
 			}
 		});
@@ -2591,9 +2472,10 @@ function initPunishmentLogs() {
 
 function initClickableDate(selectors) {
 	// Somehow get the date column and init hrefs
+	binarySearchValues.firstPageFound = false;
 	const dateColumn = $(selectors.datetable);
 	const dateColumnText = getTableValues(dateColumn);
-	const searchDate = new URLSearchParams(location.search).get(binarySearchValues.search);
+	const searchDate = new Date(new URLSearchParams(location.search).get(binarySearchValues.search));
 	for (var i = 0; i < dateColumn.length; i++) {
 		var urlsearch = new URLSearchParams();
 		const nickFieldValue = document.getElementById(selectors.inputFieldIDs.nick).value;
@@ -2612,51 +2494,152 @@ function initClickableDate(selectors) {
 			urlsearch.set(selectors.searchParams.ip, ipFieldValue);
 		}
 		urlsearch.set(binarySearchValues.search, dateColumnText[i]);
-		var href = selectors.oppositeBase + getInitialRangeSearch(urlsearch).toString();
+		urlsearch.set(binarySearchValues.page, 1);
+		urlsearch.set(binarySearchValues.active, 'true');
+		var href = selectors.oppositeBase + urlsearch.toString();
 		var datecolor = colors.blue;
-		if (dateColumnText[i] == searchDate) {
+		var compareDate = new Date(dateColumnText[i]);
+		if (isSameDate(searchDate, compareDate)) {
 			datecolor = colors.green;
+			binarySearchValues.firstPageFound = true;
 			dateColumn[i].scrollIntoView({ behavior: 'smooth', block: 'center' });
 		}
-		dateColumn[i].innerHTML = "<a style='color: " + datecolor + ";' href='" + href + "' target='_blank'>"
-			+ dateColumnText[i] + "</a>";
+		dateColumn[i].innerHTML = "<a style='color: " + datecolor + ";' href='" + href + "'>" + dateColumnText[i] + "</a>";
 	}
+}
+
+async function binarySearch(urlsearch) {
+	urlsearch.delete(binarySearchValues.active);
+
+	if (binarySearchValues.firstPageFound) {
+		return;
+	}
+
+	var loadingOverlay = document.getElementById('processingOverlay');
+	var loadingDesc = document.getElementById('processingOverlayDescription');
+	var loadingProgress = document.getElementById('processingOverlayProgress');
+	var loadingSpinner = document.getElementById('processingOverlaySpinner');
+
+	loadingDesc.innerHTML = "Searching Date: " + urlsearch.get(binarySearchValues.search) + " ...";
+	loadingOverlay.style.display = 'block';
+
+	loadingProgress.innerHTML = "Looking for Search Range...";
+
+
+	var l, r, mid, initialSearchLoop, binarySearchLoop;
+	var x = new Date(urlsearch.get(binarySearchValues.search));
+
+	l = 1;
+	r = binarySearchValues.initialSteps;
+	initialSearchLoop = true;
+	binarySearchLoop = true;
+
+	var maxpage = await getLastTablePage(urlsearch);
+	var maxpageInt = parseInt(maxpage);
+
+	if (maxpageInt < r) {
+		r = maxpageInt;
+		initialSearchLoop = false;
+	}
+
+	loadingProgress.innerHTML = "Got initial Range, looking for date...";
+
+	while (initialSearchLoop) {
+		var rTable = await getFullTable(urlsearch, r, false, r);
+		loadingProgress.innerHTML = "Current Page: " + r;
+		switch (processDatesFromTable(rTable, x)) {
+			case 0:
+				// Found the Page
+				urlsearch.set(binarySearchValues.page, r);
+				initialSearchLoop = false;
+				binarySearchLoop = false;
+				break;
+			case 1:
+				initialSearchLoop = false;
+				break;
+			case -1:
+				l += binarySearchValues.initialSteps;
+				r += binarySearchValues.initialSteps;
+				break;
+		}
+	}
+
+	mid = l + Math.floor((r - l) / 2);
+
+	while (binarySearchLoop) {
+		if (r >= l) {
+			var midTable = await getFullTable(urlsearch, mid, false, mid);
+			loadingProgress.innerHTML = "Current Page: " + mid;
+			switch (processDatesFromTable(midTable, x)) {
+				case 0:
+					// Found the Page
+					urlsearch.set(binarySearchValues.page, mid);
+					binarySearchLoop = false;
+					break;
+				case 1:
+					r = mid - 1;
+					break;
+				case -1:
+					l = mid + 1;
+					break;
+			}
+			mid = l + Math.floor((r - l) / 2);
+		} else {
+			binarySearchLoop = false;
+			urlsearch.set(binarySearchValues.page, l);
+		}
+	}
+
+	loadingSpinner.style.display = 'none';
+	loadingProgress.innerHTML = 'Page Found, Reloading!';
+	openPaginationPage(urlsearch);
+}
+
+function processDatesFromTable(tbl, date) {
+	var dateNewerThanPage = false;
+	var dateOlderThanPage = false;
+	var dateColumn;
+
+	for (i = 0; i < tbl[0].length; i++) {
+		if (tbl[0][i].textContent == "Date") {
+			dateColumn = i;
+			break;
+		}
+	}
+
+	for (i = 1; i < tbl.length; i++) {
+		var compareDate = new Date(tbl[i][dateColumn].textContent);
+		if (isSameDate(date, compareDate)) {
+			dateNewerThanPage = true;
+			dateOlderThanPage = true;
+			break;
+		}
+		if (date > compareDate) {
+			dateNewerThanPage = true;
+		}
+		if (date < compareDate) {
+			dateOlderThanPage = true;
+		}
+	}
+
+	if (dateNewerThanPage && dateOlderThanPage)
+		return 0;
+	if (dateOlderThanPage)
+		return -1;
+
+	// if the page is empty we can assume the date is newer
+	// This should therefore be the default return
+	return 1;
 }
 
 window.addEventListener('load', function () {
 
 	if (location.hostname === hostnameACP) {
 		originalTitle = document.title;
+
 		if (this.location.pathname === '/' + acpTable) {
 			InitACPTableSortable();
 			return;
-		}
-		var searchparams = new URLSearchParams(location.search);
-		if (searchparams.get(binarySearchValues.active) == 'true') {
-			openPaginationPage(getInitialRangeSearch());
-			return;
-		}
-		if (pathPlayerSearch.test(location.pathname)) {
-			initSearchButton(playerSearchSelectors, true);
-		}
-		if (pathAuthLogs.test(location.pathname)) {
-			initSearchButton(authLogValues, false);
-			if (searchparams.get(authLogValues.active) == 'true') {
-				autoFetchAndProcessAuthData(searchparams);
-			}
-		}
-		if (pathMoneyLogs.test(location.pathname)) {
-			initClickableDate(moneyLogSelectors);
-			initSearchButton(moneyLogSelectors, false);
-		}
-		if (pathInventoryLogs.test(location.pathname)) {
-			initClickableDate(inventoryLogSelectors);
-		}
-		if (pathFractionLogs.test(location.pathname)) {
-			initFractionPage();
-		}
-		if (punishmentSearch.test(location.pathname)) {
-			initPunishmentLogs();
 		}
 
 		injectLoadingOverlay();
@@ -2671,6 +2654,36 @@ window.addEventListener('load', function () {
 
 		for (let i = 0; i < customMarginArray.length; i++) {
 			addCSSStyle(customMarginArray[i]);
+		}
+
+		var searchparams = new URLSearchParams(location.search);
+		if (pathPlayerSearch.test(location.pathname)) {
+			initSearchButton(playerSearchSelectors, true);
+		}
+		if (pathAuthLogs.test(location.pathname)) {
+			initSearchButton(authLogValues, false);
+			if (searchparams.get(authLogValues.active) == 'true') {
+				autoFetchAndProcessAuthData(searchparams);
+			}
+		}
+		if (pathMoneyLogs.test(location.pathname)) {
+			initClickableDate(moneyLogSelectors);
+			initSearchButton(moneyLogSelectors, false);
+			if (searchparams.get(binarySearchValues.active) == 'true') {
+				binarySearch(searchparams);
+			}
+		}
+		if (pathInventoryLogs.test(location.pathname)) {
+			initClickableDate(inventoryLogSelectors);
+			if (searchparams.get(binarySearchValues.active) == 'true') {
+				binarySearch(searchparams);
+			}
+		}
+		if (pathFractionLogs.test(location.pathname)) {
+			initFractionPage();
+		}
+		if (punishmentSearch.test(location.pathname)) {
+			initPunishmentLogs();
 		}
 	}
 
