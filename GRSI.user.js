@@ -117,7 +117,6 @@ const authLogValues = {
 const moneyLogSelectors = {
 	count: 'body > div.app-layout-canvas > div > main > div > div.row > div',
 	header: 'body > div.app-layout-canvas > div > main > div > div:nth-child(2) > div > table > thead > tr > th:nth-child(4)',
-	nametable: 'body > div.app-layout-canvas > div > main > div > div:nth-child(2) > div > table > tbody > tr > td:nth-child(1) > a',
 	datetable: 'body > div.app-layout-canvas > div > main > div > div:nth-child(2) > div > table > tbody > tr > td:nth-child(2)',
 	qttytable: 'body > div.app-layout-canvas > div > main > div > div:nth-child(2) > div > table > tbody > tr > td:nth-child(4)',
 	type: _selectorTypes.money,
@@ -476,8 +475,6 @@ function waitForInit(pathSelectors) {
 				}
 			} else if (pathSelectors.type == _selectorTypes.money) {
 				var tables = {};
-				tables.nameField = $(pathSelectors.nametable);
-				tables.dateText = getTableValues($(pathSelectors.datetable));
 				tables.qtty = $(pathSelectors.qttytable);
 				initMoneyFields(tables, pathSelectors);
 			}
@@ -786,6 +783,9 @@ function initSearchButton(pathSelectors, button_listener) {
 		search_button.after(searchAllButton);
 		searchAllButton.after(optionsbutton);
 	} else if (pathSelectors.isMoneyLog) {
+		// we use the Optionsbutton to place other buttons, but it's unused for moneylogs, so hide it
+		optionsbutton.style.display = 'none';
+
 		var formBlock = document.getElementById(moneyLogSelectors.headerBlock);
 		var buttonBlock = document.querySelector(moneyLogSelectors.buttonBlock);
 		var pageFormGroup = document.createElement('div');
