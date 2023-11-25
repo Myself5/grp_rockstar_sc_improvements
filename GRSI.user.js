@@ -1713,7 +1713,22 @@ async function handleMoneySearchAll() {
 
 			var dailySumTable = addToDailySumMap(getMoneyTable(fullTable));
 
-			openDailyTotalTable(getTrimmedDatePlayerData(dailySumTable.sum), dailySumTable.names);
+			var title = '';
+			if (nickset) {
+				title = title + "Nick: " + nickname + " ";
+			}
+			if (idset) {
+				title = title + "ID: " + id + " ";
+			}
+			if (nickset) {
+				title = title + "IP: " + ip + " ";
+			}
+			if (nickset) {
+				title = title + "Desc: " + desc + " ";
+			}
+			title = title + "- ACP Money Summary";
+
+			openDailyTotalTable(getTrimmedDatePlayerData(dailySumTable.sum), dailySumTable.names, title);
 
 			document.getElementById('loading').style.display = 'none';
 			document.title = '[Done] ' + originalTitle;
@@ -1788,7 +1803,7 @@ function addToDailySumMap(tables) {
 	return { sum: playerMapPagesSum, names: playerIDNameMap };
 }
 
-function openDailyTotalTable(moneyData, playerIDNameMap) {
+function openDailyTotalTable(moneyData, playerIDNameMap, title) {
 	var tbl = document.createElement('table'),
 		header = tbl.createTHead();
 	tbl.width = "90%";
@@ -1841,6 +1856,7 @@ function openDailyTotalTable(moneyData, playerIDNameMap) {
 		var bdy = document.createElement('body');
 		bdy.appendChild(tbl);
 		newWindow.document.body = bdy;
+		newWindow.document.title = title;
 	}, false);
 }
 
