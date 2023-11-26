@@ -158,16 +158,34 @@ const inventoryLogSelectors = {
 	searchDefault: 'skip',
 	oppositeBase: websiteACP + "/" + location.pathname.split('/')[1] + '/logs/money?', // + Search
 	searchParams: {
+		page: 'page',
 		nick: 'nick',
 		id: 'accid',
 		ip: 'ip',
-		description: 'description',
+		action: 'action',
+		item: 'id_item',
 	},
 	inputFieldIDs: {
 		nick: 'nick',
 		id: 'accid',
 		ip: 'ip',
+		item: 'item_info',
+		action: 'action',
+		param: 'parameter',
 	},
+	tblSelectors: {
+		nick: 0,
+		id: 1,
+		item: 2,
+		qtty: 3,
+		parameter: 4,
+		action: 5,
+		ip: 6,
+		date: 7,
+		page: 8,
+	},
+	initDateClickable: true,
+	headerBlock: 'logsinventory_post',
 }
 
 const playerSearchSelectors = {
@@ -499,7 +517,7 @@ function tableTo2DArray(table, page, skipHeader = false) {
 		for (let cell of row.cells) {
 			rowData.push(cell);
 		}
-		rowData.push(page.toString());
+		rowData.push({ textContent: page });
 		data.push(rowData);
 	}
 	return data;
@@ -689,7 +707,7 @@ async function fetchAndProcessAuthData(urlsearch, compareIP, closeAfterProcess) 
 		entry.ip = fullTable[i][authLogValues.tblSelectors.ip].textContent;
 		entry.sc = fullTable[i][authLogValues.tblSelectors.sc].textContent;
 		entry.date = fullTable[i][authLogValues.tblSelectors.date].textContent;
-		entry.firstpage = fullTable[i][authLogValues.tblSelectors.page];
+		entry.firstpage = fullTable[i][authLogValues.tblSelectors.page].textContent;
 		entry.loginAmount = 1;
 
 		const tblContent = GetFromobjTable(objectTable, entry, compareIP);
@@ -997,6 +1015,165 @@ function initFractionPage() {
 	formBlock.appendChild(filterFormGroup);
 }
 
+function initInventoryParameterSearch() {
+	var actionField = document.getElementById(inventoryLogSelectors.inputFieldIDs.action);
+
+	var search_button;
+	// Search Button on Auto an money logs is not labled, search by class and type
+	// search_button = document.getElementById('search-but');
+	var buttons = document.getElementsByClassName('btn btn-default');
+
+	for (var i = 0; i < buttons.length; i++) {
+		if (buttons[i].type === 'submit') {
+			search_button = buttons[i];
+		}
+	}
+
+	var paramInput = document.createElement('input');
+	paramInput.className = 'form-control small-margin-left';
+	paramInput.type = 'number';
+	paramInput.name = inventoryLogSelectors.inputFieldIDs.param;
+	paramInput.id = inventoryLogSelectors.inputFieldIDs.param;
+	paramInput.placeholder = 'Parameter';
+	paramInput.addEventListener("keyup", (event) => {
+		if (event.key === "Enter") {
+			handleInventoryParameterSearch();
+		}
+	});
+	actionField.after(paramInput);
+
+	var paramButton = document.createElement('button');
+	paramButton.title = "Click to search the results by their parameter"
+	paramButton.innerHTML = "Search with Parameter";
+	paramButton.type = "button";
+	paramButton.className = "btn btn-default small-margin-left";
+	paramButton.onclick = function () {
+		handleInventoryParameterSearch();
+	}
+
+	search_button.after(paramButton);
+
+	var loading = document.createElement('img');
+	loading.src = 'https://i.gifer.com/ZKZg.gif';
+	loading.height = 38;
+	loading.id = 'loading';
+	loading.style.display = 'none';
+
+	loading.style.padding = '0px 5px';
+
+	var progress = document.createElement('a');
+	progress.id = 'currentpage';
+	progress.style.color = 'initial';
+
+	paramButton.after(loading);
+	loading.after(progress);
+}
+
+async function handleInventoryParameterSearch() {
+	var page = 1;
+	var itemID;
+
+	var urlsearch = new URLSearchParams(location.search);
+	for (const [key, entry] of Object.entries(inventoryLogSelectors.searchParams)) {
+		urlsearch.set(entry, inventoryLogSelectors.searchDefault);
+	}
+
+	const nickFieldValue = document.getElementById(inventoryLogSelectors.inputFieldIDs.nick).value;
+	const idFieldValue = document.getElementById(inventoryLogSelectors.inputFieldIDs.id).value;
+	const ipFieldValue = document.getElementById(inventoryLogSelectors.inputFieldIDs.ip).value;
+	const itemFieldValue = document.getElementById(inventoryLogSelectors.inputFieldIDs.item).value;
+	const actionFieldValue = document.getElementById(inventoryLogSelectors.inputFieldIDs.action).value;
+	const parameterFieldValue = document.getElementById(inventoryLogSelectors.inputFieldIDs.param).value;
+	const parameter = parseInt(parameterFieldValue);
+
+	if (nickFieldValue) {
+		urlsearch.set(inventoryLogSelectors.searchParams.nick, nickFieldValue);
+	}
+	if (idFieldValue) {
+		urlsearch.set(inventoryLogSelectors.searchParams.id, idFieldValue);
+	}
+	if (ipFieldValue) {
+		urlsearch.set(inventoryLogSelectors.searchParams.ip, ipFieldValue);
+	}
+	if (actionFieldValue) {
+		urlsearch.set(inventoryLogSelectors.searchParams.action, actionFieldValue);
+	}
+	if (itemFieldValue) {
+		// This is a huge hack, but works better than the original ACP... as always.
+		// The Item ID is the number between the last braces in the item Name
+		itemID = parseInt(itemFieldValue.split('(').slice(-1)[0].split(')')[0]);
+		urlsearch.set(inventoryLogSelectors.searchParams.item, itemID);
+	}
+	if (isNaN(itemID)) {
+		window.alert("Incorrect Item specified!");
+		return;
+	}
+	if (isNaN(parameter)) {
+		window.alert("No Parameter specified!");
+		return;
+	}
+
+	var endpagestring = window.prompt("Please specify an Endpage for the Parameter Search!\n"
+		+ "All Pages from 1 to Endpage will be checked for the specified Parameter.");
+
+	var endpage = parseInt(endpagestring);
+
+	if (isNaN(endpage)) {
+		window.alert("Incorrect Endpage specified!");
+		return;
+	}
+
+	document.getElementById('loading').style.display = '';
+	let progressText = document.getElementById('currentpage');
+	progressText.innerHTML = 'Page: 0/' + endpage;
+	document.title = '[0/' + endpage + '] ' + originalTitle;
+
+
+	let maxEndPage = await getLastTablePage(urlsearch);
+	let maxEndPageInt = parseInt(maxEndPage);
+	if (endpage > maxEndPageInt) {
+		endpage = maxEndPageInt;
+		progressText.innerHTML = 'Page: 0/' + endpage;
+		document.title = '[0/' + endpage + '] ' + originalTitle;
+	}
+
+	var filterTable = [[], [], [], [], [], [], [], [], []];
+	var fullTable = await getFullTable(urlsearch, endpage, progressText, page);
+
+	addToTable(filterTable, fullTable, inventoryLogSelectors.tblSelectors, 0);
+
+	for (let i = 1; i < fullTable.length; i++) {
+		var param = parseInt(fullTable[i][inventoryLogSelectors.tblSelectors.parameter].textContent);
+		if (parameter == param) {
+			fullTable[i][inventoryLogSelectors.tblSelectors.item].textContent = itemFieldValue;
+			addToTable(filterTable, fullTable, inventoryLogSelectors.tblSelectors, i);
+		}
+	}
+
+	var title = '';
+	if (idFieldValue) {
+		title = title + "ID: " + idFieldValue + " ";
+	}
+	if (nickFieldValue) {
+		title = title + "Nick: " + nickFieldValue + " ";
+	}
+	if (ipFieldValue) {
+		title = title + "IP: " + ipFieldValue + " ";
+	}
+	if (actionFieldValue) {
+		title = title + "Action: " + actionFieldValue + " ";
+	}
+	title = title + "Item: " + itemID + " ";
+	title = title + "Param: " + parameter + " ";
+	title = title + "- ACP Inventory Summary";
+
+	openFilterTable(filterTable, inventoryLogSelectors, false, title, false, urlsearch);
+
+	document.getElementById('loading').style.display = 'none';
+	document.title = '[Done] ' + originalTitle;
+	progressText.innerHTML = '';
+}
+
 function addToTable(arr, tbl, selectors, index) {
 	for (const [key, selectorValue] of Object.entries(selectors)) {
 		arr[selectorValue].push(tbl[index][selectorValue].textContent);
@@ -1104,7 +1281,7 @@ function getAuthCellContent(filterTable, selector, j, i) {
 	return a;
 }
 
-function openFilterTable(filterTable, values, textsummary, title, closeAfterProcess = false) {
+function openFilterTable(filterTable, values, textsummary, title, closeAfterProcess, urlsearch) {
 	var tbl = document.createElement('table'),
 		header = tbl.createTHead();
 	tbl.width = "90%";
@@ -1117,7 +1294,7 @@ function openFilterTable(filterTable, values, textsummary, title, closeAfterProc
 
 	var headerRow = header.insertRow();
 
-	for (let i = 0; i < filterTable.length; i++) {
+	for (let i = 0; i < filterTable.length - (values.initDateClickable ? 1 : 0); i++) {
 		cell = headerRow.insertCell();
 		cell.innerHTML = "<b>" + filterTable[i][0] + "</b>";
 		cell.style.border = '1px solid #ddd';
@@ -1149,7 +1326,7 @@ function openFilterTable(filterTable, values, textsummary, title, closeAfterProc
 			}
 		}
 
-		for (let j = 0; j < filterTable.length; j++) {
+		for (let j = 0; j < filterTable.length - (values.initDateClickable ? 1 : 0); j++) {
 			var cell = tr.insertCell();
 			if (j == values.tblSelectors.nick) {
 				var a = document.createElement('a');
@@ -1175,6 +1352,16 @@ function openFilterTable(filterTable, values, textsummary, title, closeAfterProc
 
 						cell.appendChild(a);
 					}
+				} else if (values.initDateClickable && j == values.tblSelectors.date) {
+					var a = document.createElement('a');
+					a.innerHTML = filterTable[j][i];
+					a.style.color = colors.blue;
+
+					urlsearch.set(values.searchParams.page, filterTable[values.tblSelectors.page][i]);
+					urlsearch.set(binarySearchValues.search, filterTable[j][i]);
+					a.href = location.origin + location.pathname + '?' + urlsearch.toString();
+
+					cell.appendChild(a);
 				} else {
 					cell.innerHTML = filterTable[j][i];
 				}
@@ -2675,6 +2862,7 @@ window.addEventListener('load', function () {
 		}
 		if (pathInventoryLogs.test(location.pathname)) {
 			initClickableDate(inventoryLogSelectors);
+			initInventoryParameterSearch();
 			if (searchparams.get(binarySearchValues.active) == 'true') {
 				binarySearch(searchparams);
 			}
