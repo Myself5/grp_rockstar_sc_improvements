@@ -2629,8 +2629,7 @@ function injectPageChooser() {
 			if (textbox.value.length > 0) {
 				openPaginationPageInt(textbox.value);
 			} else {
-				if (window.confirm("Do you really want to search for this date: " + datechooser.value + "?"
-					+ "\n(The Tab will continue to reload until the search is done)")) {
+				if (window.confirm("Do you really want to search for this date: " + datechooser.value + "?")) {
 					var urlsearch = new URLSearchParams(location.search);
 					urlsearch.set(binarySearchValues.search, datechooser.value);
 					binarySearchValues.firstPageFound = false;
