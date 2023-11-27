@@ -2790,6 +2790,11 @@ function processDatesFromTable(tbl, date) {
 		if (tbl[0][i].textContent == "Date") {
 			dateColumn = i;
 			break;
+		} else if (tbl[0][i].textContent == "Ban date") {
+			dateColumn = i;
+			date.setHours(0);
+			date.setMinutes(0);
+			date.setSeconds(0);
 		}
 	}
 
