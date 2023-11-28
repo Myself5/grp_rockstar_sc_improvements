@@ -72,7 +72,7 @@ const pathMoneyLogs = new RegExp('/admin_.*\/logs\/money');
 const pathInventoryLogs = new RegExp('/admin_.*\/logs\/inventory');
 const pathFractionLogs = new RegExp('/admin_.*\/logs\/fraction');
 const pathPlayerSearch = new RegExp('/admin_.*\/account\/search');
-const punishmentSearch = new RegExp('/admin_.*\/punishmen\/');
+const punishmentSearch = new RegExp('/admin_.*\/punishmen\/ban');
 const moneyMaxValue = 5000000;
 
 const _selectorTypes = {
@@ -211,8 +211,20 @@ const fractionSearchValues = {
 	},
 };
 
-const punishmentLogs = {
+var punishmentLogs = {
 	column: 'body > div.app-layout-canvas > div > main > div > div.card > div > table > tbody > tr > td:nth-child(2)',
+	header: 'body > div.app-layout-canvas > div > main > div > div.card > div > table > thead > tr > th:nth-child(4)',
+	tblSelectors: {
+		nick: 0,
+		id: 1,
+		admin: 2,
+		days_left: 3,
+		reason: 4,
+		date: 5,
+	},
+	deleteXButtonRow: 6,
+	punishmentUndoID: [],
+	punishmentUndoEntry: [],
 };
 
 var showSCID = {
@@ -1296,7 +1308,12 @@ function openFilterTable(filterTable, values, textsummary, title, closeAfterProc
 
 	for (let i = 0; i < filterTable.length - (values.initDateClickable ? 1 : 0); i++) {
 		cell = headerRow.insertCell();
-		cell.innerHTML = "<b>" + filterTable[i][0] + "</b>";
+		if (values.deleteXButtonRow && i == values.deleteXButtonRow) {
+			cell.width = '10%';
+			cell.innerHTML = '<b>Delete Entry</b> <button id="undoRemove" style="display: none;" class="btn btn-default" type="button">Undo</button>'
+		} else {
+			cell.innerHTML = "<b>" + filterTable[i][0] + "</b>";
+		}
 		cell.style.border = '1px solid #ddd';
 		cell.style.padding = "10px";
 	}
@@ -1362,6 +1379,8 @@ function openFilterTable(filterTable, values, textsummary, title, closeAfterProc
 					a.href = location.origin + location.pathname + '?' + urlsearch.toString();
 
 					cell.appendChild(a);
+				} else if (values.deleteXButtonRow && j == values.deleteXButtonRow) {
+					cell.innerHTML = '<button class="btn btn-default" type="button">&#x2716; Delete</button>'
 				} else {
 					cell.innerHTML = filterTable[j][i];
 				}
@@ -1430,9 +1449,71 @@ function InitACPTableSortable() {
 					sortTable(table, i);
 				}
 			}
+			var undoRemove = document.getElementById('undoRemove');
+			if (undoRemove) {
+				initDeleteButtons(table);
+
+				undoRemove.onclick = function () {
+					var id = punishmentLogs.punishmentUndoID.pop();
+					var entry = punishmentLogs.punishmentUndoEntry.pop();
+					var newRow = table.insertRow(id);
+					var count = entry.children.length;
+					for (var i = 0; i < count; i++) {
+						newRow.appendChild(entry.children[0]);
+					}
+					if (punishmentLogs.punishmentUndoID.length < 1) {
+						undoRemove.style.display = 'none';
+					}
+					initDeleteButtons(table);
+				}
+
+				var accIDField = document.querySelector("#acptable > thead > tr:nth-child(1) > td:nth-child(2)");
+				var banDateField = document.querySelector("#acptable > thead > tr:nth-child(1) > td:nth-child(6)");
+
+				accIDField.innerHTML = accIDField.innerHTML + ' <button id="copyAccID" class="btn btn-default" type="button">Copy</button>';
+				banDateField.innerHTML = banDateField.innerHTML + ' <button id="copyBanDate" class="btn btn-default" type="button">Copy</button>';
+
+				var copyAccID = document.getElementById('copyAccID');
+				var copyBanDate = document.getElementById('copyBanDate');
+
+				copyAccID.onclick = function (event) {
+					var ids = "";
+					for (i = 1; i < table.rows.length; i++) {
+						ids += table.rows[i].children[punishmentLogs.tblSelectors.id].textContent + '\r\n';
+					}
+					navigator.clipboard.writeText(ids);
+					event.stopPropagation();
+				}
+
+				copyBanDate = document.getElementById('copyBanDate');
+				copyBanDate.onclick = function (event) {
+					var dates = "";
+					for (i = 1; i < table.rows.length; i++) {
+						var date = new Date(table.rows[i].children[punishmentLogs.tblSelectors.date].textContent);
+						dates += date.getDate() + "." + (date.getMonth() + 1) + "." + date.getFullYear() + '\r\n';
+					}
+					navigator.clipboard.writeText(dates);
+					event.stopPropagation();
+				}
+			}
 			clearInterval(checkExist);
 		}
 	}, 200); // check every 200ms
+}
+
+function initDeleteButtons(table) {
+	var removeButtons = [];
+	for (let i = 1; i < table.rows.length; i++) {
+		var queryRow = i + 1;
+		removeButtons[i - 1] = document.querySelector("#acptable > thead > tr:nth-child(" + queryRow + ") > td:nth-child(7)");
+		removeButtons[i - 1].onclick = function () {
+			punishmentLogs.punishmentUndoID.push(i);
+			punishmentLogs.punishmentUndoEntry.push(table.rows[i]);
+			table.deleteRow(i);
+			undoRemove.style.display = '';
+			initDeleteButtons(table);
+		}
+	}
 }
 
 // Source: https://www.w3schools.com/howto/howto_js_sort_table.asp
@@ -2654,6 +2735,72 @@ function initPunishmentLogs() {
 		var url = authorizationLogsBase + urlsearch.toString();
 		idtdTbl[i].innerHTML = "<a style='color: " + colors.blue + "' href=" + url + " target='_blank'>" + idTbl[i] + "</a>";
 	}
+
+	document.querySelector(punishmentLogs.header).innerHTML = "Days left until unban <button type='button' id='filterBans'>Filter</button>";
+
+	var filterbutton = document.getElementById('filterBans');
+	filterbutton.onclick = async function () {
+		var bandurationstring = window.prompt("Please specify the minimum original Ban duration you want to filter for.");
+
+		var banduration = parseInt(bandurationstring);
+
+		if (isNaN(banduration)) {
+			window.alert("Incorrect Duration specified!");
+			return;
+		}
+
+		var endpagestring = window.prompt("Please specify an Endpage for the Duration Search!\n"
+			+ "All Pages from 1 to Endpage will be checked for the specified Duration.");
+
+		var endpage = parseInt(endpagestring);
+
+		if (isNaN(endpage)) {
+			window.alert("Incorrect Endpage specified!");
+			return;
+		}
+
+		var loadingOverlay = document.getElementById('processingOverlay');
+		var loadingDesc = document.getElementById('processingOverlayDescription');
+		var loadingProgress = document.getElementById('processingOverlayProgress');
+		document.title = "[0/" + endpage + "] " + originalTitle;
+
+		loadingDesc.innerHTML = "Filtering Tables...";
+		loadingProgress.innerHTML = "Page: 0/" + endpage;
+		loadingOverlay.style.display = 'block';
+
+		var filterTable = [[], [], [], [], [], [], []];
+		var fullTable = await getFullTable(new URLSearchParams(), endpage, loadingProgress, 1);
+
+		addToTable(filterTable, fullTable, punishmentLogs.tblSelectors, 0);
+
+		var now = new Date();
+		var today = new Date(now.getFullYear() + "-" + (now.getMonth() + 1) + "-" + now.getDate());
+
+		for (i = 1; i < fullTable.length; i++) {
+			var testdate = new Date(fullTable[i][punishmentLogs.tblSelectors.date].textContent);
+			var diff = datediff(testdate, today);
+			var duration = parseInt(fullTable[i][punishmentLogs.tblSelectors.days_left].textContent) + diff;
+
+			if (banduration <= duration) {
+				addToTable(filterTable, fullTable, punishmentLogs.tblSelectors, i);
+			}
+		}
+
+		var title = "Min. Ban: " + banduration + "d - ACP Ban Summary";
+
+		openFilterTable(filterTable, punishmentLogs, false, title, false, urlsearch);
+
+		loadingOverlay.style.display = 'none';
+		document.title = "[Done] " + originalTitle;
+	}
+}
+
+/**
+ * Take the difference between the dates and divide by milliseconds per day.
+ * Round to nearest whole number to deal with DST.
+ */
+function datediff(first, second) {
+	return Math.round((second - first) / (1000 * 60 * 60 * 24));
 }
 
 function initClickableDate(selectors) {
