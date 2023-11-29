@@ -1444,12 +1444,15 @@ function InitACPTableSortable() {
 		var table = document.getElementById(acpTable);
 		var hdrs = table.rows[0].cells;
 		if (hdrs != null) {
+			var undoRemove = document.getElementById('undoRemove');
 			for (let i = 0; i < hdrs.length; i++) {
 				hdrs[i].onclick = function () {
 					sortTable(table, i);
+					if (undoRemove) {
+						initDeleteButtons(table);
+					}
 				}
 			}
-			var undoRemove = document.getElementById('undoRemove');
 			if (undoRemove) {
 				initDeleteButtons(table);
 
