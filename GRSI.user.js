@@ -2378,12 +2378,13 @@ function processRSPlayerCards(playerCards) {
 						request.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
 					}
 				})
-					.done(function (data) {
+					.done(async function (data) {
 						var scid = data.accounts[0].rockstarAccount.rockstarId;
 						var uname = data.accounts[0].rockstarAccount.name;
 						if (searched_acc.name === uname) {
 							submitSCResult(uname, scValueTypes.scid, scid);
 							if (closeAfterProcess.activeTab) {
+								await new Promise(resolve => setTimeout(resolve, 250));
 								window.close();
 							}
 						}
