@@ -563,6 +563,19 @@ async function getFullTable(urlsearch, endpage, progressText, startpage) {
 			urlsearch.set(authLogValues.searchParams.page, i);
 			let url = location.origin + location.pathname + '?' + urlsearch.toString();
 			let response = await fetch(url);
+			if (!response.ok) {
+				console.log("Failed to load Page: " + i + " for the first time. Error code: " + response.status);
+				response = await fetch(url);
+				if (!response.ok) {
+					console.log("Failed to load Page: " + i + " for the second time. Error code: " + response.status);
+					response = await fetch(url);
+					if (!response.ok) {
+						console.log("Failed to load Page: " + i + " for the third time. Error code: " + response.status);
+						resolve(false);
+						return;
+					}
+				}
+			}
 			let text = await response.text();
 			let doc = parser.parseFromString(text, "text/html");
 			let table = doc.querySelector('.card-block table');
@@ -576,7 +589,11 @@ async function getFullTable(urlsearch, endpage, progressText, startpage) {
 	}
 
 	await Promise.all(promises).then((results) => {
-		results.forEach((element) => fullTableData.push(...element));
+		results.forEach((element) => {
+			if (element) {
+				fullTableData.push(...element);
+			}
+		});
 	});
 
 	return fullTableData;
@@ -604,6 +621,19 @@ async function getSCforIDTable(ids, progressText) {
 			urlsearch.set(authLogValues.searchParams.id, ids[i]);
 			let url = authorizationLogsBase + urlsearch.toString();
 			let response = await fetch(url);
+			if (!response.ok) {
+				console.log("Failed to load Page: " + i + " for the first time. Error code: " + response.status);
+				response = await fetch(url);
+				if (!response.ok) {
+					console.log("Failed to load Page: " + i + " for the second time. Error code: " + response.status);
+					response = await fetch(url);
+					if (!response.ok) {
+						console.log("Failed to load Page: " + i + " for the third time. Error code: " + response.status);
+						resolve(false);
+						return;
+					}
+				}
+			}
 			let text = await response.text();
 			let doc = parser.parseFromString(text, "text/html");
 			let table = doc.querySelector('.card-block table');
