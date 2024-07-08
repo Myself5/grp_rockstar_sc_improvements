@@ -1,3 +1,24 @@
+# Disclaimer:
+
+### After continuous disappointment from GrandRPs Management I decided to peacefully leave the team for a new project. For my contributions over the years I have been thanked with a Blacklist on all GrandRP Servers.
+
+### Branch 8.0-rework is a full rework that utilizes background multitasking and cleans up design flaws originating from the ongoing additions to the script, resulting in a big speedup for data collection and processing. It has never been released, but, at the time of me leaving the team, had been fully working and was scheduled to be released shortly after.
+
+### A comparison in speed can be found here:
+### Version 7.13.0 (Last Public Release):
+[Total Duration of 01:30.02 for 55 Pages](https://streamable.com/f3xia5)
+
+### Version 8.0.0 (Reworked for parallel background processing):
+[Total Duration of 00:41.73 for 55 Pages](https://streamable.com/h2yabx)
+
+### Without my script, all those pages will need to be manually reviewed and checked for a different SocialClub to find a possible Violation of General Rule 1.1.
+
+
+### I have been informed that the GrandRP management is no longer tolerating my tool and threatens to blacklist any admin still using it, so be advised.
+
+### "Good Luck",
+### Hans Mendoza
+
 # GrandRP ACP - Rockstar Social Club Improvements (GRSI)
 <p align="center"><img src="Pictures/header.png" alt="header"></p>
 
